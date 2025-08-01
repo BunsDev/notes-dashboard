@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import { StackProvider, StackTheme } from "@stackframe/stack";
-import { stackServerApp } from "@/app/stack";
+import { stackServerApp } from "./stack";
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import '@/styles/globals.css'
+import { ThemeProvider } from "next-themes";
 
 export const metadata: Metadata = {
   title: 'Notes Dashboard',
@@ -32,14 +33,8 @@ html {
         enableSystem={false}
         forcedTheme="dark"
       > */}
-      <body>
-        <StackProvider app={stackServerApp}>
-          <StackTheme>
-            {children}
-          </StackTheme>
-        </StackProvider>
-      </body>
+      <body><StackProvider app={stackServerApp}><StackTheme>{children}</StackTheme></StackProvider></body>
       {/* </ThemeProvider> */}
     </html>
   )
-} 
+}
