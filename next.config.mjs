@@ -32,6 +32,11 @@ const nextConfig = {
         permanent: true,
       },
       {
+        source: "/logout",
+        destination: "/handler/sign-out",
+        permanent: true,
+      },
+      {
         source: "/signout",
         destination: "/handler/sign-out",
         permanent: true,

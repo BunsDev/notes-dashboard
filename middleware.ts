@@ -1,26 +1,42 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/api/users";
+import { stackServerApp } from "@/app/stack";
+import { syncUserWithDatabase } from "@/lib/auth/sync-user";
 
-// Only check for authentication in middleware
+// Check for authentication and sync user data with database
 export async function middleware(req: NextRequest) {
-
     const { pathname } = req.nextUrl; // Get the current path
+    
+    // Define protected paths that require authentication
     const protectedPaths = ["/notes"];
+    
+    // Check if current path is protected
+    const isProtectedPath = protectedPaths.some(path => 
+        pathname === path || pathname.startsWith(`${path}/`)
+    );
 
-    // Auth check (NextAuth JWT)
-    const user = await getCurrentUser();
-    if (protectedPaths.includes(pathname)) {
-        if (!user || !user.primaryEmail || !user.id) {
-            return NextResponse.redirect(new URL("/handler/sign-up", req.url));
+    if (isProtectedPath) {
+        // Get authenticated user from Stack Auth
+        const user = await stackServerApp.getUser();
+        
+        // If no user is authenticated, redirect to sign-in page
+        if (!user) {
+            return NextResponse.redirect(new URL("/handler/sign-in", req.url));
         }
+        
+        // Sync the user with our database to ensure they exist in our users table
+        await syncUserWithDatabase();
     }
 
-    // If signed-in user tries to access sign-up or log-in, redirect to log-out
-    const isAuthRoute = ["/handler/sign-up", "/handler/log-in"].includes(
-        pathname
+    // If signed-in user tries to access sign-in or sign-up, redirect to homepage
+    const isAuthRoute = ["/handler/sign-in", "/handler/sign-up"].some(route => 
+        pathname === route || pathname.startsWith(`${route}/`)
     );
+    
     if (isAuthRoute) {
-        return NextResponse.redirect(new URL("/handler/sign-out", req.url));
+        const user = await stackServerApp.getUser();
+        if (user) {
+            return NextResponse.redirect(new URL("/notes", req.url));
+        }
     }
 
     return NextResponse.next();
@@ -28,6 +44,9 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
     matcher: [
+        "/notes", 
+        "/notes/:path*",
+        "/handler/:path*",
         "/settings",
     ],
 };
