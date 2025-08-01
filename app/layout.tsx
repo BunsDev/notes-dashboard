@@ -3,7 +3,7 @@ import { StackProvider, StackTheme } from "@stackframe/stack";
 import { stackServerApp } from "./stack";
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
-import './globals.css'
+import '@/styles/globals.css'
 import { ThemeProvider } from "next-themes";
 
 export const metadata: Metadata = {
@@ -27,14 +27,14 @@ html {
 }
         `}</style>
       </head>
-      <ThemeProvider 
-        attribute="class" 
-        defaultTheme="dark" 
+      {/* <ThemeProvider
+        attribute="class"
+        defaultTheme="dark"
         enableSystem={false}
         forcedTheme="dark"
-      >
-        <body><StackProvider app={stackServerApp}><StackTheme>{children}</StackTheme></StackProvider></body>
-      </ThemeProvider>
+      > */}
+      <body><StackProvider app={stackServerApp}><StackTheme>{children}</StackTheme></StackProvider></body>
+      {/* </ThemeProvider> */}
     </html>
   )
 }

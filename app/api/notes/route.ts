@@ -43,9 +43,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Content is required" }, { status: 400 });
         }
 
-        if (!body.author) {
-            console.log("/api/notes POST: Author is required");
-            return NextResponse.json({ error: "Author is required" }, { status: 400 });
+        if (!body.userId) {
+            console.log("/api/notes POST: User ID is required");
+            return NextResponse.json({ error: "User ID is required" }, { status: 400 });
         }
 
         if (!body.categoryId) {
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
         // Create the note input object
         const noteInput = {
             title: body.title,
-            author: user.id,
+            userId: user.id,
             content: body.content,
             categoryId: body.categoryId,
             urls: body.urls || [],
@@ -134,7 +134,7 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
 
-        if (existingNote.data.author !== user.id) {
+        if (existingNote.data.userId !== user.id) {
             console.log("/api/notes DELETE: Unauthorized to delete this note");
             return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
         }

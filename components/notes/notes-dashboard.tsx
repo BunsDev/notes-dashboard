@@ -1,18 +1,21 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { Search, Plus, Pin, PinOff, Edit, Trash2, BookOpen, Code, Users, Lightbulb } from "lucide-react"
+import { Search, Pin, PinOff, Edit, Trash2, BookOpen, Code, Users, Lightbulb, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Textarea } from "@/components/ui/textarea"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import NotesJSON from "@/lib/notes/notes.json"
+import { toast } from "sonner"
 import { Note } from "@/lib/types"
+import { AddNote } from "./add-note"
+import { EditNote } from "./edit-note"
+import { getNotes, toggleNotePin as toggleNotePinAction, deleteNote as deleteNoteAction } from "@/lib/db/actions"
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@radix-ui/react-dialog"
+import { DialogHeader } from "@/components/ui/dialog"
 
 const categories = [
   { id: "technical", label: "Technical", icon: Code, color: "bg-blue-100 text-blue-800" },
@@ -21,23 +24,14 @@ const categories = [
   { id: "tips", label: "Tips & Tricks", icon: Lightbulb, color: "bg-yellow-100 text-yellow-800" },
 ]
 
-const initialNotes: Note[] = NotesJSON.map((note) => ({
-  ...note,
-  created: new Date(note.created),
-  updated: new Date(note.updated),
-}))
-
 export function NotesDashboard() {
-  const [notes, setNotes] = useState<Note[]>(initialNotes)
+  const [notes, setNotes] = useState<Note[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [editingNote, setEditingNote] = useState<Note | null>(null)
-  const [newNote, setNewNote] = useState({
-    title: "",
-    content: "",
-    category: "technical",
-  })
+  const [isLoading, setIsLoading] = useState(true)
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false)
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -52,6 +46,11 @@ export function NotesDashboard() {
         e.preventDefault()
         setIsCreateDialogOpen(true)
       }
+      // Cmd/Ctrl + C for categories
+      if ((e.metaKey || e.ctrlKey) && e.key === "c") {
+        e.preventDefault()
+        setIsCategoryDialogOpen(true)
+      }
       // Escape to close dialogs
       if (e.key === "Escape") {
         setIsCreateDialogOpen(false)
@@ -61,6 +60,41 @@ export function NotesDashboard() {
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [])
+
+  // Load notes from database
+  const loadNotes = async () => {
+    setIsLoading(true)
+    try {
+      const result = await getNotes()
+      if (result.success && result.data) {
+        const typedNotes: Note[] = result.data.map(note => ({
+          id: note.id.toString(),
+          title: note.title,
+          content: note.content,
+          // Map categoryId from database to frontend category property
+          category: note.category?.id?.toString() || "1",
+          // Ensure urls is always an array
+          urls: note.urls || [],
+          isPinned: note.isPinned,
+          created: new Date(note.created),
+          updated: new Date(note.updated)
+        }))
+        setNotes(typedNotes)
+      } else {
+        toast.error(result.error || "Failed to load notes")
+      }
+    } catch (error) {
+      console.error("Error loading notes:", error)
+      toast.error("An error occurred while loading notes")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Load notes on initial render
+  useEffect(() => {
+    loadNotes()
   }, [])
 
   const filteredNotes = useMemo(() => {
@@ -76,40 +110,62 @@ export function NotesDashboard() {
   const pinnedNotes = filteredNotes.filter((note) => note.isPinned)
   const unpinnedNotes = filteredNotes.filter((note) => !note.isPinned)
 
-  const togglePin = (noteId: string) => {
-    setNotes((prev) => prev.map((note) => (note.id === noteId ? { ...note, isPinned: !note.isPinned } : note)))
-  }
+  const togglePin = async (noteId: string) => {
+    try {
+      // Optimistically update UI
+      setNotes((prev) => prev.map((note) => (
+        note.id === noteId ? { ...note, isPinned: !note.isPinned } : note
+      )))
 
-  const createNote = () => {
-    if (!newNote.title.trim() || !newNote.content.trim()) return
+      // Update in database
+      const result = await toggleNotePinAction(noteId)
 
-    const note: Note = {
-      id: Date.now().toString(),
-      title: newNote.title,
-      content: newNote.content,
-      category: newNote.category,
-      urls: [],
-      isPinned: false,
-      created: new Date(),
-      updated: new Date(),
+      if (!result.success) {
+        // Revert on error
+        toast.error(result.error || "Failed to update note")
+        setNotes((prev) => prev.map((note) => (
+          note.id === noteId ? { ...note, isPinned: !note.isPinned } : note
+        )))
+      }
+    } catch (error) {
+      console.error("Error toggling pin:", error)
+      toast.error("An error occurred while updating note")
+      // Revert on error
+      loadNotes()
     }
-
-    setNotes((prev) => [note, ...prev])
-    setNewNote({ title: "", content: "", category: "technical" })
-    setIsCreateDialogOpen(false)
   }
 
-  const updateNote = () => {
-    if (!editingNote) return
+  // Handle successful note creation
+  const handleNoteCreated = () => {
+    loadNotes()
+  }
 
-    setNotes((prev) =>
-      prev.map((note) => (note.id === editingNote.id ? { ...editingNote, updatedAt: new Date() } : note)),
-    )
+  const handleNoteUpdated = () => {
+    loadNotes()
     setEditingNote(null)
   }
 
-  const deleteNote = (noteId: string) => {
-    setNotes((prev) => prev.filter((note) => note.id !== noteId))
+  const deleteNote = async (noteId: string) => {
+    try {
+      // Optimistically update UI
+      const notesToRestore = [...notes]
+      setNotes((prev) => prev.filter((note) => note.id !== noteId))
+
+      // Delete from database
+      const result = await deleteNoteAction(noteId)
+
+      if (!result.success) {
+        // Revert on error
+        toast.error(result.error || "Failed to delete note")
+        setNotes(notesToRestore)
+      } else {
+        toast.success("Note deleted successfully")
+      }
+    } catch (error) {
+      console.error("Error deleting note:", error)
+      toast.error("An error occurred while deleting note")
+      loadNotes()
+    }
   }
 
   const getCategoryInfo = (categoryId: string) => {
@@ -158,56 +214,18 @@ export function NotesDashboard() {
               ))}
             </SelectContent>
           </Select>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                New Note (⌘N)
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Create New Note</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <Input
-                  placeholder="Note title"
-                  value={newNote.title}
-                  onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
-                />
-                <Select value={newNote.category} onValueChange={(value) => setNewNote({ ...newNote, category: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Textarea
-                  placeholder="Note content"
-                  value={newNote.content}
-                  onChange={(e) => setNewNote({ ...newNote, content: e.target.value })}
-                  rows={8}
-                />
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={createNote}>Create Note</Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <AddNote
+            categories={categories}
+            onSuccess={handleNoteCreated}
+            isOpen={isCreateDialogOpen}
+            onOpenChange={setIsCreateDialogOpen}
+          />
         </div>
 
         {/* Keyboard Shortcuts Help */}
         <div className="mb-6 p-3 bg-blue-50 rounded-lg border border-blue-200">
           <p className="text-sm text-blue-800">
-            <strong>Keyboard Shortcuts:</strong> ⌘K (Search) • ⌘N (New Note) • ESC (Close Dialog)
+            <strong>Keyboard Shortcuts:</strong> ⌘K (Search) • ⌘N (New Note) • ⌘C (Categories) • ESC (Close Dialog)
           </p>
         </div>
 
@@ -267,7 +285,7 @@ export function NotesDashboard() {
             <p className="text-gray-600 mb-4">
               {searchQuery || selectedCategory !== "all"
                 ? "Try adjusting your search or filter"
-                : "Create your first note to get started"}
+                : "Create your first note to get started."}
             </p>
             <Button onClick={() => setIsCreateDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
@@ -276,12 +294,63 @@ export function NotesDashboard() {
           </div>
         )}
 
-        
+        {/* Edit Note Dialog */}
+        <EditNote
+          categories={categories}
+          editingNote={editingNote}
+          setEditingNote={setEditingNote}
+          onSuccess={handleNoteUpdated}
+        />
+
       </div>
+
+      {/* Category Selection Dialog */}
+      <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select Category</DialogTitle>
+          </DialogHeader>
+          <DialogTrigger asChild>
+            <Button>
+              <BookOpen className="h-4 w-4 mr-2" />
+              Select Category
+            </Button>
+          </DialogTrigger>
+          <div className="space-y-2">
+            <Button
+              variant={selectedCategory === "all" ? "default" : "outline"}
+              className="w-full justify-start"
+              onClick={() => {
+                setSelectedCategory("all")
+                setIsCategoryDialogOpen(false)
+              }}
+            >
+              <BookOpen className="h-4 w-4 mr-2" />
+              All Categories
+            </Button>
+            {categories.map((category) => {
+              const CategoryIcon = category.icon
+              return (
+                <Button
+                  key={category.id}
+                  variant={selectedCategory === category.id ? "default" : "outline"}
+                  className="w-full justify-start"
+                  onClick={() => {
+                    setSelectedCategory(category.id)
+                    setIsCategoryDialogOpen(false)
+                  }}
+                >
+                  <CategoryIcon className="h-4 w-4 mr-2" />
+                  {category.label}
+                </Button>
+              )
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
-
 interface NoteCardProps {
   note: Note
   onTogglePin: (id: string) => void

@@ -24,7 +24,7 @@ export async function getNotes() {
     }
     
     const data = await db.query.notes.findMany({
-      where: eq(notes.author, user.id),
+      where: eq(notes.userId, user.id),
       with: {
         category: true,
       },
@@ -70,7 +70,7 @@ export async function getNoteById(id: string) {
     const data = await db.query.notes.findFirst({
       where: and(
         eq(notes.id, numericId),
-        eq(notes.author, user.id)
+        eq(notes.userId, user.id)
       ),
       with: { category: true },
     });
@@ -111,7 +111,7 @@ export async function createNote(note: NewNote) {
     
     await db.insert(notes).values({
       ...note,
-      author: user.id, // Ensure the current user is set as the author
+      userId: user.id, // Ensure the current user is set as the author
       isPinned: note.isPinned ?? false,
       created: new Date(),
       updated: new Date(),
@@ -156,7 +156,7 @@ export async function updateNote(id: string, note: Partial<Note>) {
     const existingNote = await db.query.notes.findFirst({
       where: and(
         eq(notes.id, numericId),
-        eq(notes.author, user.id)
+        eq(notes.userId, user.id)
       ),
     });
     
@@ -174,7 +174,7 @@ export async function updateNote(id: string, note: Partial<Note>) {
       })
       .where(and(
         eq(notes.id, numericId),
-        eq(notes.author, user.id)
+        eq(notes.userId, user.id)
       ));
       
     revalidatePath('/');
@@ -216,7 +216,7 @@ export async function deleteNote(id: string) {
     const existingNote = await db.query.notes.findFirst({
       where: and(
         eq(notes.id, numericId),
-        eq(notes.author, user.id)
+        eq(notes.userId, user.id)
       ),
     });
     
@@ -230,7 +230,7 @@ export async function deleteNote(id: string) {
     await db.delete(notes).where(
       and(
         eq(notes.id, numericId),
-        eq(notes.author, user.id)
+        eq(notes.userId, user.id)
       )
     );
     
@@ -273,7 +273,7 @@ export async function toggleNotePin(id: string) {
     const note = await db.query.notes.findFirst({
       where: and(
         eq(notes.id, numericId),
-        eq(notes.author, user.id)
+        eq(notes.userId, user.id)
       ),
       columns: { isPinned: true }
     });
@@ -293,7 +293,7 @@ export async function toggleNotePin(id: string) {
       })
       .where(and(
         eq(notes.id, numericId),
-        eq(notes.author, user.id)
+        eq(notes.userId, user.id)
       ));
       
     revalidatePath('/');
@@ -334,7 +334,7 @@ export async function getNotesByCategory(categoryId: string) {
     const data = await db.query.notes.findMany({
       where: and(
         eq(notes.categoryId, numericCategoryId),
-        eq(notes.author, user.id)
+        eq(notes.userId, user.id)
       ),
       with: { category: true },
       orderBy: [

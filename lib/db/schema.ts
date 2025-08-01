@@ -6,6 +6,7 @@ import { createId } from '@paralleldrive/cuid2';
 export const categoryEnum = pgEnum('category_enum', [
   'technical',
   'behavioral',
+  "about",
   'concepts',
   'tips',
 ]);
@@ -17,20 +18,20 @@ export const categories = pgTable('categories', {
   slug: varchar('slug', { length: 50 }).notNull().unique(),
   icon: varchar('icon', { length: 50 }).notNull(),
   color: varchar('color', { length: 50 }).notNull(),
-  created: timestamp('created_at').defaultNow().notNull(),
+  created: timestamp('created').defaultNow().notNull(),
 });
 
 // Notes table
 export const notes = pgTable('notes', {
   id: serial('id').primaryKey(),
-  author: varchar('author', { length: 128 }).notNull(),
+  userId: varchar('user_id', { length: 128 }).references(() => users.id).notNull(),
   title: varchar('title', { length: 255 }).notNull(),
   content: text('content').notNull(),
   categoryId: serial('category_id').references(() => categories.id).notNull(),
   urls: text('urls').array(),
   isPinned: boolean('is_pinned').default(false).notNull(),
-  created: timestamp('created_at').defaultNow().notNull(),
-  updated: timestamp('updated_at').defaultNow().notNull(),
+  created: timestamp('created').defaultNow().notNull(),
+  updated: timestamp('updated').defaultNow().notNull(),
 });
 
 // User table (for future authentication)
@@ -38,8 +39,8 @@ export const users = pgTable('users', {
   id: varchar('id', { length: 128 }).primaryKey().$defaultFn(() => createId()),
   name: varchar('name', { length: 255 }),
   email: varchar('email', { length: 255 }).unique(),
-  created: timestamp('created_at').defaultNow().notNull(),
-  updated: timestamp('updated_at').defaultNow().notNull(),
+  created: timestamp('created').defaultNow().notNull(),
+  updated: timestamp('updated').defaultNow().notNull(),
 });
 
 // Relations
@@ -48,6 +49,14 @@ export const notesRelations = relations(notes, ({ one }) => ({
     fields: [notes.categoryId],
     references: [categories.id],
   }),
+  user: one(users, {
+    fields: [notes.userId],
+    references: [users.id],
+  }),
+}));
+
+export const usersRelations = relations(users, ({ many }) => ({
+  notes: many(notes),
 }));
 
 // Types for frontend use
