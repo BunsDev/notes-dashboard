@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import NotesJSON from "@/lib/notes/notes.json"
 
 interface Note {
   id: string
@@ -29,48 +30,11 @@ const categories = [
   { id: "tips", label: "Tips & Tricks", icon: Lightbulb, color: "bg-yellow-100 text-yellow-800" },
 ]
 
-const initialNotes: Note[] = [
-  {
-    id: "1",
-    title: "STAR Method",
-    content:
-      "Situation: Set the context\nTask: Describe what you needed to accomplish\nAction: Explain what you did\nResult: Share the outcome",
-    category: "behavioral",
-    isPinned: true,
-    createdAt: new Date("2024-01-15"),
-    updatedAt: new Date("2024-01-15"),
-  },
-  {
-    id: "2",
-    title: "React Hooks Rules",
-    content:
-      "1. Only call hooks at the top level\n2. Only call hooks from React functions\n3. Use ESLint plugin for hooks\n4. useState for state, useEffect for side effects",
-    category: "technical",
-    isPinned: true,
-    createdAt: new Date("2024-01-16"),
-    updatedAt: new Date("2024-01-16"),
-  },
-  {
-    id: "3",
-    title: "Time Complexity Cheat Sheet",
-    content:
-      "O(1) - Constant\nO(log n) - Logarithmic\nO(n) - Linear\nO(n log n) - Linearithmic\nO(n²) - Quadratic\nO(2^n) - Exponential",
-    category: "concepts",
-    isPinned: false,
-    createdAt: new Date("2024-01-17"),
-    updatedAt: new Date("2024-01-17"),
-  },
-  {
-    id: "4",
-    title: "Questions to Ask Interviewer",
-    content:
-      "• What does a typical day look like?\n• What are the biggest challenges facing the team?\n• How do you measure success in this role?\n• What opportunities are there for growth?",
-    category: "tips",
-    isPinned: true,
-    createdAt: new Date("2024-01-18"),
-    updatedAt: new Date("2024-01-18"),
-  },
-]
+const initialNotes: Note[] = NotesJSON.map((note) => ({
+  ...note,
+  createdAt: new Date(note.createdAt),
+  updatedAt: new Date(note.updatedAt),
+}))
 
 export function NotesDashboard() {
   const [notes, setNotes] = useState<Note[]>(initialNotes)
