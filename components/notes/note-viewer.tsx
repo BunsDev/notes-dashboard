@@ -107,7 +107,7 @@ export function NoteViewer({ note, isOpen, onOpenChange, getCategoryInfo }: Note
   
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="flex flex-col max-w-3xl max-h-[80vh]">
+      <DialogContent className="flex flex-col max-w-3xl max-h-[80vh] overflow-auto">
         <DialogHeader>
           <div className="flex items-center justify-between mb-2">
             <DialogTitle className="text-xl">{note.title}</DialogTitle>
