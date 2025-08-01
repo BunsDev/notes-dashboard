@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { Search, Pin, PinOff, Edit, Trash2, BookOpen, Code, Users, Lightbulb, Plus, FileText } from "lucide-react"
+import { Search, Pin, PinOff, Edit, Trash2, BookOpen, Code, Users, Lightbulb, Plus, FileText, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,14 +10,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { toast } from "sonner"
-import { Note } from "@/lib/types"
+import { Category, Note } from "@/lib/db/schema"
 import { AddNote } from "./add-note"
 import { EditNote } from "./edit-note"
+import { NoteViewer } from "./note-viewer"
 import { getNotes, toggleNotePin as toggleNotePinAction, deleteNote as deleteNoteAction } from "@/lib/db/actions"
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@radix-ui/react-dialog"
 import { DialogHeader } from "@/components/ui/dialog"
 
 const categories = [
+  { id: 0, label: "All Categories", icon: Code, color: "bg-blue-100 text-blue-800" },
   { id: 1, label: "Technical", icon: Code, color: "bg-blue-100 text-blue-800" },
   { id: 2, label: "Behavioral", icon: Users, color: "bg-green-100 text-green-800" },
   { id: 3, label: "About", icon: FileText, color: "bg-blue-100 text-blue-800" },
@@ -30,6 +32,7 @@ export function NotesDashboard() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<number>(1)
   const [editingNote, setEditingNote] = useState<Note | null>(null)
+  const [viewingNote, setViewingNote] = useState<Note | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false)
@@ -69,20 +72,14 @@ export function NotesDashboard() {
     try {
       const result = await getNotes()
       if (result.success && result.data) {
-        const typedNotes: Note[] = result.data.map(note => ({
-          id: note.id.toString(),
-          title: note.title,
-          content: note.content,
-          // userId: note.user_id,
-          // Map categoryId from database to frontend category property
-          categoryId: note.category?.id || 1,
-          // Ensure urls is always an array
-          urls: note.urls || [],
-          isPinned: note.isPinned,
+        const typedNotes = result.data.map(note => ({
+          ...note,
+          // Convert dates from strings to Date objects if needed
           created: new Date(note.created),
           updated: new Date(note.updated)
         }))
         setNotes(typedNotes)
+        // setNotes already done in the mapping above
       } else {
         toast.error(result.error || "Failed to load notes")
       }
@@ -104,7 +101,7 @@ export function NotesDashboard() {
       const matchesSearch =
         note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         note.content.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesCategory = selectedCategory === 1 || Number(note.categoryId) === selectedCategory
+      const matchesCategory = selectedCategory === 1 || note.categoryId === selectedCategory
       return matchesSearch && matchesCategory
     })
   }, [notes, searchQuery, selectedCategory])
@@ -116,7 +113,7 @@ export function NotesDashboard() {
     try {
       // Optimistically update UI
       setNotes((prev) => prev.map((note) => (
-        note.id === noteId ? { ...note, isPinned: !note.isPinned } : note
+        note.id === Number(noteId) ? { ...note, isPinned: !note.isPinned } : note
       )))
 
       // Update in database
@@ -126,7 +123,7 @@ export function NotesDashboard() {
         // Revert on error
         toast.error(result.error || "Failed to update note")
         setNotes((prev) => prev.map((note) => (
-          note.id === noteId ? { ...note, isPinned: !note.isPinned } : note
+          note.id === Number(noteId) ? { ...note, isPinned: !note.isPinned } : note
         )))
       }
     } catch (error) {
@@ -151,7 +148,7 @@ export function NotesDashboard() {
     try {
       // Optimistically update UI
       const notesToRestore = [...notes]
-      setNotes((prev) => prev.filter((note) => note.id !== noteId))
+      setNotes((prev) => prev.filter((note) => note.id !== Number(noteId)))
 
       // Delete from database
       const result = await deleteNoteAction(noteId)
@@ -171,15 +168,16 @@ export function NotesDashboard() {
   }
 
   const getCategoryInfo = (categoryId: number) => {
-    return categories.find((cat) => cat.id === categoryId) || categories[0]
+    return categories.find((cat) => cat.id === Number(categoryId)) || categories[0]
   }
 
   const getNoteInfo = (noteId: string) => {
-    return notes.find((note) => note.id === noteId) || notes[0]
+    return notes.find((note) => String(note.id) === noteId) || null
   }
 
   const getUrls = (noteId: string) => {
-    return getNoteInfo(noteId).urls
+    const note = getNoteInfo(noteId)
+    return note?.urls || []
   }
 
   return (
@@ -203,14 +201,17 @@ export function NotesDashboard() {
               className="pl-10"
             />
           </div>
-          <Select value={selectedCategory.toString()} onValueChange={(value: number) => setSelectedCategory(Number(value))}>
+          <Select value={selectedCategory.toString()}
+            onValueChange={(value: string) => setSelectedCategory(Number(value))}
+            defaultValue={selectedCategory.toString()}
+          >
             <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder={selectedCategory.toString()} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value={selectedCategory.toString()} />
               {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
+                <SelectItem key={category.id} value={category.id.toString()}>
                   {category.label}
                 </SelectItem>
               ))}
@@ -247,6 +248,7 @@ export function NotesDashboard() {
                   onTogglePin={togglePin}
                   onEdit={setEditingNote}
                   onDelete={deleteNote}
+                  onView={setViewingNote}
                   getUrls={getUrls}
                   getCategoryInfo={getCategoryInfo}
                 />
@@ -272,6 +274,7 @@ export function NotesDashboard() {
                   onTogglePin={togglePin}
                   onEdit={setEditingNote}
                   onDelete={deleteNote}
+                  onView={setViewingNote}
                   getCategoryInfo={getCategoryInfo}
                   getUrls={getUrls}
                 />
@@ -299,57 +302,35 @@ export function NotesDashboard() {
         {/* Edit Note Dialog */}
         <EditNote
           categories={categories}
-          editingNote={editingNote}
-          setEditingNote={setEditingNote}
+          editingNote={editingNote as any}
+          setEditingNote={setEditingNote as (note: any) => void}
+          isOpen={!!editingNote}
+          onOpenChange={(open) => {
+            if (!open) setEditingNote(null);
+          }}
           onSuccess={handleNoteUpdated}
+        />
+
+        {/* Note Viewer Dialog */}
+        <NoteViewer
+          note={viewingNote as any}
+          isOpen={!!viewingNote}
+          onOpenChange={(open) => {
+            if (!open) setViewingNote(null);
+          }}
+          getCategoryInfo={getCategoryInfo}
         />
 
       </div>
 
       {/* Category Selection Dialog */}
-      <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Select Category</DialogTitle>
-          </DialogHeader>
-          <DialogTrigger asChild>
-            <Button>
-              <BookOpen className="h-4 w-4 mr-2" />
-              Select Category
-            </Button>
-          </DialogTrigger>
-          <div className="space-y-2">
-            <Button
-              variant={selectedCategory === 1 ? "default" : "outline"}
-              className="w-full justify-start"
-              onClick={() => {
-                setSelectedCategory(1)
-                setIsCategoryDialogOpen(false)
-              }}
-            >
-              <BookOpen className="h-4 w-4 mr-2" />
-              All Categories
-            </Button>
-            {categories.map((category) => {
-              const CategoryIcon = category.icon
-              return (
-                <Button
-                  key={category.id}
-                  variant={selectedCategory === Number(category.id) ? "default" : "outline"}
-                  className="w-full justify-start"
-                  onClick={() => {
-                    setSelectedCategory(category.id)
-                    setIsCategoryDialogOpen(false)
-                  }}
-                >
-                  <CategoryIcon className="h-4 w-4 mr-2" />
-                  {category.label}
-                </Button>
-              )
-            })}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <CategorySelectionDialog 
+        categories={categories} 
+        selectedCategory={selectedCategory} 
+        setSelectedCategory={setSelectedCategory} 
+        isOpen={isCategoryDialogOpen}
+        onOpenChange={setIsCategoryDialogOpen}
+      />
     </div>
   )
 }
@@ -358,12 +339,13 @@ interface NoteCardProps {
   onTogglePin: (id: string) => void
   onEdit: (note: Note) => void
   onDelete: (id: string) => void
+  onView: (note: Note) => void
   getCategoryInfo: (categoryId: number) => any
   getUrls: (noteId: string) => string[]
 }
 
-function NoteCard({ note, onTogglePin, onEdit, onDelete, getCategoryInfo, getUrls }: NoteCardProps) {
-  const categoryInfo = getCategoryInfo(Number(note.category))
+function NoteCard({ note, onTogglePin, onEdit, onDelete, onView, getCategoryInfo, getUrls }: NoteCardProps) {
+  const categoryInfo = getCategoryInfo(note.categoryId)
   const CategoryIcon = categoryInfo.icon
 
   return (
@@ -375,8 +357,11 @@ function NoteCard({ note, onTogglePin, onEdit, onDelete, getCategoryInfo, getUrl
             <CardTitle className="text-base truncate">{note.title}</CardTitle>
           </div>
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button variant="ghost" size="sm" onClick={() => onTogglePin(note.id)} className="h-8 w-8 p-0">
+            <Button variant="ghost" size="sm" onClick={() => onTogglePin(note.id.toString())} className="h-8 w-8 p-0">
               {note.isPinned ? <PinOff className="h-4 w-4 text-orange-500" /> : <Pin className="h-4 w-4" />}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => onView(note)} className="h-8 w-8 p-0">
+              <Eye className="h-4 w-4" />
             </Button>
             <Button variant="ghost" size="sm" onClick={() => onEdit(note)} className="h-8 w-8 p-0">
               <Edit className="h-4 w-4" />
@@ -384,7 +369,7 @@ function NoteCard({ note, onTogglePin, onEdit, onDelete, getCategoryInfo, getUrl
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onDelete(note.id)}
+              onClick={() => onDelete(note.id.toString())}
               className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
             >
               <Trash2 className="h-4 w-4" />
@@ -395,7 +380,7 @@ function NoteCard({ note, onTogglePin, onEdit, onDelete, getCategoryInfo, getUrl
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-32">
-          <p className="text-sm text-gray-600 whitespace-pre-wrap">{note.content}</p>
+          <p className="text-sm text-gray-600 whitespace-pre-wrap cursor-pointer hover:text-gray-800" onClick={() => onView(note)}>{note.content}</p>
         </ScrollArea>
         <div className="mt-3 pt-3 border-t">
           <p className="text-xs text-gray-400">Updated {note.updated.toLocaleDateString()}</p>
@@ -404,3 +389,52 @@ function NoteCard({ note, onTogglePin, onEdit, onDelete, getCategoryInfo, getUrl
     </Card>
   )
 }
+
+const CategorySelectionDialog = ({ categories, selectedCategory, setSelectedCategory, isOpen, onOpenChange }: { categories: any, selectedCategory: number, setSelectedCategory: (category: number) => void, isOpen: boolean, onOpenChange: (open: boolean) => void }) => {
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md mx-auto">
+        <DialogHeader>
+          <DialogTitle>Select Category</DialogTitle>
+        </DialogHeader>
+        <DialogTrigger asChild>
+          <Button>
+            <BookOpen className="h-4 w-4 mr-2" />
+            Select Category
+          </Button>
+        </DialogTrigger>
+        <div className="space-y-2">
+          <Button
+            variant={selectedCategory === 1 ? "default" : "outline"}
+            className="w-full justify-start"
+            onClick={() => {
+              setSelectedCategory(1)
+              onOpenChange(false)
+            }}
+          >
+            <BookOpen className="h-4 w-4 mr-2" />
+            All Categories
+          </Button>
+          {categories.map((category: Category) => {
+            const CategoryIcon = category.icon
+            return (
+              <Button
+                key={category.id}
+                variant={selectedCategory === category.id ? "default" : "outline"}
+                className="w-full justify-start"
+                onClick={() => {
+                  setSelectedCategory(category.id)
+                  onOpenChange(false)
+                }}
+              >
+                <CategoryIcon />
+                {category.name}
+              </Button>
+            )
+          })}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
