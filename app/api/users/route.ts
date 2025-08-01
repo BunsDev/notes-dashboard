@@ -11,6 +11,8 @@ import { createId } from "@paralleldrive/cuid2";
  * Supports two modes:
  * - All users (requires admin privileges in the future)
  * - Current user profile (when no id param provided)
+ * 
+ * Also handles auto-creation of users if they don't exist in the database yet
  */
 export async function GET(request: NextRequest) {
 	try {
@@ -20,10 +22,12 @@ export async function GET(request: NextRequest) {
 			return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 		}
 		console.log("/api/users GET: Current user", currentUser);
+
 		// Check if a specific user ID is requested
 		const { searchParams } = new URL(request.url);
 		const userId = searchParams.get("id");
 		console.log("/api/users GET: User ID", userId);
+
 		if (userId) {
 			// For now, a user can only access their own data
 			// Future: Add admin check for accessing other users
@@ -37,11 +41,30 @@ export async function GET(request: NextRequest) {
 			// Get specific user
 			const result = await getUserById(userId);
 			console.log("/api/users GET: Found user", result);
-			if (!result.success) {
-				return NextResponse.json(
-					{ error: result.error || "User not found" },
-					{ status: 404 }
-				);
+			
+			// If user doesn't exist in our database yet, create them
+			if (!result.success || !result.data) {
+				console.log("/api/users GET: User not found in database, creating...");
+				// Create the user in our database using auth info
+				const newUser = {
+					id: currentUser.id,
+					name: currentUser.displayName || null,
+					email: currentUser.primaryEmail || null,
+					created: new Date(),
+					updated: new Date(),
+				};
+				
+				try {
+					await db.insert(users).values(newUser);
+					console.log("/api/users GET: User created successfully", newUser);
+					return NextResponse.json({ user: newUser, created: true });
+				} catch (createError) {
+					console.error("Error creating user:", createError);
+					return NextResponse.json(
+						{ error: "Failed to create user", message: (createError as Error).message },
+						{ status: 500 }
+					);
+				}
 			}
 			
 			return NextResponse.json({ user: result.data });
@@ -49,6 +72,32 @@ export async function GET(request: NextRequest) {
 			// Default to returning current user profile
 			const result = await getUserById(currentUser.id);
 			console.log("/api/users GET: Found user", result);
+
+			// If user doesn't exist in our database yet, create them
+			if (!result.success || !result.data) {
+				console.log("/api/users GET: User not found in database, creating...");
+				// Create the user in our database using auth info
+				const newUser = {
+					id: currentUser.id,
+					name: currentUser.displayName || null,
+					email: currentUser.primaryEmail || null,
+					created: new Date(),
+					updated: new Date(),
+				};
+				
+				try {
+					await db.insert(users).values(newUser);
+					console.log("/api/users GET: User created successfully", newUser);
+					return NextResponse.json({ user: newUser, created: true });
+				} catch (createError) {
+					console.error("Error creating user:", createError);
+					return NextResponse.json(
+						{ error: "Failed to create user", message: (createError as Error).message },
+						{ status: 500 }
+					);
+				}
+			}
+			
 			return NextResponse.json({ user: result.data });
 			
 			// Future: Add admin-only permission to list all users
