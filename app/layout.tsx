@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import { StackProvider, StackTheme } from "@stackframe/stack";
+import { stackServerApp } from "../stack";
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import './globals.css'
@@ -24,7 +26,7 @@ html {
 }
         `}</style>
       </head>
-      <body>{children}</body>
+      <body><StackProvider app={stackServerApp}><StackTheme>{children}</StackTheme></StackProvider></body>
     </html>
   )
 }

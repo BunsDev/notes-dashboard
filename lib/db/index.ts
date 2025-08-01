@@ -2,12 +2,10 @@ import { drizzle } from 'drizzle-orm/neon-http';
 import { neon, neonConfig } from '@neondatabase/serverless';
 import { Pool } from 'pg';
 import * as schema from './schema';
+import { drizzle as drizzlePgNode } from 'drizzle-orm/node-postgres';
 
 // For Node.js, we need to set this to true to use fetch
 neonConfig.fetchConnectionCache = true;
-
-// For direct HTTP connection (serverless)
-let db: ReturnType<typeof createDrizzleClient>;
 
 // For connection pooling in Node.js environments
 let connectionPool: Pool | null = null;
@@ -20,12 +18,15 @@ function createDrizzleClient() {
   return drizzle(sql, { schema });
 }
 
+// Singleton instance of Drizzle client
+let _db: ReturnType<typeof createDrizzleClient>;
+
 // Get the Drizzle client (singleton)
 export function getDb() {
-  if (!db) {
-    db = createDrizzleClient();
+  if (!_db) {
+    _db = createDrizzleClient();
   }
-  return db;
+  return _db;
 }
 
 // Export the db instance directly
@@ -40,6 +41,11 @@ export function getConnectionPool() {
     });
   }
   return connectionPool;
+}
+
+// Get Node Postgres Drizzle instance (for migrations)
+export function getNodeDb() {
+  return drizzlePgNode(getConnectionPool(), { schema });
 }
 
 // Close the connection pool
