@@ -6,6 +6,7 @@ import { db } from ".";
 import { categories, Note, notes, users, type NewNote } from "./schema";
 import { getCurrentUser } from "../api/users";
 import { redirect } from "next/navigation";
+import { DBUserUpdateInput } from "../types/users";
 
 // ===== NOTE OPERATIONS =====
 
@@ -15,30 +16,30 @@ import { redirect } from "next/navigation";
 export async function getNotes() {
   try {
     const user = await getCurrentUser();
-    
+
     if (!user) {
       return {
         success: false,
         error: "Authentication required"
       };
     }
-    
+
     const data = await db.query.notes.findMany({
       where: eq(notes.userId, user.id),
       with: {
         category: true,
       },
       orderBy: [
-        desc(notes.isPinned), 
+        desc(notes.isPinned),
         desc(notes.updated)
       ],
     });
     return { success: true, data };
   } catch (error) {
     console.error("Error fetching notes:", error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Unknown error occurred" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred"
     };
   }
 }
@@ -49,24 +50,24 @@ export async function getNotes() {
 export async function getNoteById(id: string) {
   try {
     const user = await getCurrentUser();
-    
+
     if (!user) {
       return {
         success: false,
         error: "Authentication required"
       };
     }
-    
+
     // Convert string ID to number for database query
     const numericId = parseInt(id, 10);
-    
+
     if (isNaN(numericId)) {
       return {
         success: false,
         error: "Invalid note ID format"
       };
     }
-    
+
     const data = await db.query.notes.findFirst({
       where: and(
         eq(notes.id, numericId),
@@ -74,23 +75,23 @@ export async function getNoteById(id: string) {
       ),
       with: { category: true },
     });
-    
+
     if (!data) {
-      return { 
-        success: false, 
-        error: "Note not found or you don't have permission to access it" 
+      return {
+        success: false,
+        error: "Note not found or you don't have permission to access it"
       };
     }
-    
-    return { 
-      success: true, 
-      data: data 
+
+    return {
+      success: true,
+      data: data
     };
   } catch (error) {
     console.error(`Error fetching note with ID ${id}:`, error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Unknown error occurred" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred"
     };
   }
 }
@@ -101,14 +102,14 @@ export async function getNoteById(id: string) {
 export async function createNote(note: NewNote) {
   try {
     const user = await getCurrentUser();
-    
+
     if (!user) {
       return {
         success: false,
         error: "Authentication required"
       };
     }
-    
+
     await db.insert(notes).values({
       ...note,
       userId: user.id, // Ensure the current user is set as the author
@@ -116,14 +117,14 @@ export async function createNote(note: NewNote) {
       created: new Date(),
       updated: new Date(),
     });
-    
+
     revalidatePath('/');
     return { success: true };
   } catch (error) {
     console.error("Error creating note:", error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Unknown error occurred" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred"
     };
   }
 }
@@ -134,24 +135,24 @@ export async function createNote(note: NewNote) {
 export async function updateNote(id: string, note: Partial<Note>) {
   try {
     const user = await getCurrentUser();
-    
+
     if (!user) {
       return {
         success: false,
         error: "Authentication required"
       };
     }
-    
+
     // Convert string ID to number for database query
     const numericId = parseInt(id, 10);
-    
+
     if (isNaN(numericId)) {
       return {
         success: false,
         error: "Invalid note ID format"
       };
     }
-    
+
     // First check if the note exists and belongs to this user
     const existingNote = await db.query.notes.findFirst({
       where: and(
@@ -159,14 +160,14 @@ export async function updateNote(id: string, note: Partial<Note>) {
         eq(notes.userId, user.id)
       ),
     });
-    
+
     if (!existingNote) {
       return {
         success: false,
         error: "Note not found or you don't have permission to update it"
       };
     }
-    
+
     await db.update(notes)
       .set({
         ...note,
@@ -176,14 +177,14 @@ export async function updateNote(id: string, note: Partial<Note>) {
         eq(notes.id, numericId),
         eq(notes.userId, user.id)
       ));
-      
+
     revalidatePath('/');
     return { success: true };
   } catch (error) {
     console.error(`Error updating note with ID ${id}:`, error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Unknown error occurred" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred"
     };
   }
 }
@@ -194,24 +195,24 @@ export async function updateNote(id: string, note: Partial<Note>) {
 export async function deleteNote(id: string) {
   try {
     const user = await getCurrentUser();
-    
+
     if (!user) {
       return {
         success: false,
         error: "Authentication required"
       };
     }
-    
+
     // Convert string ID to number for database query
     const numericId = parseInt(id, 10);
-    
+
     if (isNaN(numericId)) {
       return {
         success: false,
         error: "Invalid note ID format"
       };
     }
-    
+
     // First check if the note exists and belongs to this user
     const existingNote = await db.query.notes.findFirst({
       where: and(
@@ -219,28 +220,28 @@ export async function deleteNote(id: string) {
         eq(notes.userId, user.id)
       ),
     });
-    
+
     if (!existingNote) {
       return {
         success: false,
         error: "Note not found or you don't have permission to delete it"
       };
     }
-    
+
     await db.delete(notes).where(
       and(
         eq(notes.id, numericId),
         eq(notes.userId, user.id)
       )
     );
-    
+
     revalidatePath('/');
     return { success: true };
   } catch (error) {
     console.error(`Error deleting note with ID ${id}:`, error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Unknown error occurred" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred"
     };
   }
 }
@@ -251,24 +252,24 @@ export async function deleteNote(id: string) {
 export async function toggleNotePin(id: string) {
   try {
     const user = await getCurrentUser();
-    
+
     if (!user) {
       return {
         success: false,
         error: "Authentication required"
       };
     }
-    
+
     // Convert string ID to number for database query
     const numericId = parseInt(id, 10);
-    
+
     if (isNaN(numericId)) {
       return {
         success: false,
         error: "Invalid note ID format"
       };
     }
-    
+
     // First get the current pin status and check ownership
     const note = await db.query.notes.findFirst({
       where: and(
@@ -277,32 +278,32 @@ export async function toggleNotePin(id: string) {
       ),
       columns: { isPinned: true }
     });
-    
+
     if (!note) {
-      return { 
-        success: false, 
-        error: "Note not found or you don't have permission to modify it" 
+      return {
+        success: false,
+        error: "Note not found or you don't have permission to modify it"
       };
     }
-    
+
     // Toggle the pin status
     await db.update(notes)
-      .set({ 
+      .set({
         isPinned: !note.isPinned,
-        updated: new Date() 
+        updated: new Date()
       })
       .where(and(
         eq(notes.id, numericId),
         eq(notes.userId, user.id)
       ));
-      
+
     revalidatePath('/');
     return { success: true };
   } catch (error) {
     console.error(`Error toggling pin for note with ID ${id}:`, error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Unknown error occurred" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred"
     };
   }
 }
@@ -313,24 +314,24 @@ export async function toggleNotePin(id: string) {
 export async function getNotesByCategory(categoryId: string) {
   try {
     const user = await getCurrentUser();
-    
+
     if (!user) {
       return {
         success: false,
         error: "Authentication required"
       };
     }
-    
+
     // Convert string ID to number for database query
     const numericCategoryId = parseInt(categoryId, 10);
-    
+
     if (isNaN(numericCategoryId)) {
       return {
         success: false,
         error: "Invalid category ID format"
       };
     }
-    
+
     const data = await db.query.notes.findMany({
       where: and(
         eq(notes.categoryId, numericCategoryId),
@@ -338,16 +339,16 @@ export async function getNotesByCategory(categoryId: string) {
       ),
       with: { category: true },
       orderBy: [
-        desc(notes.isPinned), 
+        desc(notes.isPinned),
         desc(notes.updated)
       ],
     });
     return { success: true, data };
   } catch (error) {
     console.error(`Error fetching notes for category ${categoryId}:`, error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Unknown error occurred" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred"
     };
   }
 }
@@ -363,9 +364,9 @@ export async function getCategories() {
     return { success: true, data };
   } catch (error) {
     console.error("Error fetching categories:", error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Unknown error occurred" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred"
     };
   }
 }
@@ -381,9 +382,9 @@ export async function getUsers() {
     return { success: true, data };
   } catch (error) {
     console.error("Error fetching users:", error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Unknown error occurred" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred"
     };
   }
 }
@@ -394,15 +395,42 @@ export async function getUsers() {
 export async function getUserById(id: string) {
   try {
     const data = await db.select().from(users).where(eq(users.id, id));
-    return { 
-      success: true, 
-      data: data[0] || null 
+    return {
+      success: true,
+      data: data[0] || null
     };
   } catch (error) {
     console.error(`Error fetching user with ID ${id}:`, error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Unknown error occurred" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred"
     };
   }
+}
+
+/**
+ * Update a user
+ */
+export async function updateUser(id: string, input: DBUserUpdateInput) {
+  const updateData: Partial<typeof users.$inferInsert> = {
+    updated: new Date(),
+    name: input.name,
+    email: input.email,
+  };
+
+  await db
+    .update(users)
+    .set(updateData)
+    .where(eq(users.id, id));
+
+  return getUserById(id);
+}
+
+/**
+ * Delete a user
+ */
+export async function deleteUser(id: string) {
+  return db
+    .delete(users)
+    .where(eq(users.id, id));
 }

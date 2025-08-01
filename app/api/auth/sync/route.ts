@@ -1,12 +1,17 @@
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
-import { sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { stackServerApp } from "@/app/stack";
+
+// Use Node.js runtime for this API route to support crypto module
+export const runtime = 'nodejs';
 
 /**
  * API route to sync Stack Auth user with database
  * This is called from the client-side after authentication
+ * 
+ * Integrated with Neon Auth and Stack Auth for user management
  */
 export async function POST(request: Request) {
   try {
@@ -29,49 +34,66 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if user already exists in database
-    const existingUsers = await db
-      .select()
-      .from(users)
-      .where(sql`${users.id} = ${userId}`)
-      .limit(1);
+    // Additional user data from Stack Auth that could be stored
+    const userMetadata = {
+      userId: authUser.id,
+      name: name || authUser.displayName,
+      email: email || authUser.primaryEmail,
+      // Include additional fields from authUser if needed
+      updated: new Date(),
+    };
 
-    const existingUser = existingUsers[0];
+    // Check if user already exists in database using Drizzle's eq function
+    const existingUser = await db.query.users.findFirst({
+      where: eq(users.id, userId)
+    });
 
     if (existingUser) {
       // User exists, update their information
       await db
         .update(users)
         .set({
-          name: name || existingUser.name,
-          email: email || existingUser.email,
-          updated: new Date(),
+          name: userMetadata.name || existingUser.name,
+          email: userMetadata.email || existingUser.email,
+          updated: userMetadata.updated,
         })
-        .where(sql`${users.id} = ${userId}`);
+        .where(eq(users.id, userId));
 
-      return NextResponse.json({ 
+      return NextResponse.json({
         status: "updated",
-        userId: userId
+        userId: userId,
+        user: {
+          id: userId,
+          name: userMetadata.name || existingUser.name,
+          email: userMetadata.email || existingUser.email
+        }
       });
     } else {
       // User doesn't exist, create a new record
-      await db.insert(users).values({
+      const newUser = {
         id: userId,
-        name: name || null,
-        email: email || null,
+        name: userMetadata.name || null,
+        email: userMetadata.email || null,
         created: new Date(),
-        updated: new Date(),
-      });
+        updated: userMetadata.updated,
+      };
 
-      return NextResponse.json({ 
+      await db.insert(users).values(newUser);
+
+      return NextResponse.json({
         status: "created",
-        userId: userId
+        userId: userId,
+        user: {
+          id: userId,
+          name: newUser.name,
+          email: newUser.email
+        }
       });
     }
   } catch (error) {
     console.error("Failed to sync user with database:", error);
     return NextResponse.json(
-      { error: "Failed to sync user" },
+      { error: "Failed to sync user", message: (error as Error).message },
       { status: 500 }
     );
   }

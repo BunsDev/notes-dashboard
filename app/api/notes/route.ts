@@ -1,6 +1,10 @@
 import { createNote, getNotes, getNoteById, deleteNote, getUserById } from "@/lib/db/actions";
+import { db } from "@/lib/db";
 import { type NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/api/users";
+
+// Use Node.js runtime for this API route to support crypto module
+export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
     const searchParams = request?.nextUrl?.searchParams;
