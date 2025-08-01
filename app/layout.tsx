@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import { StackProvider, StackTheme } from "@stackframe/stack";
-import { stackServerApp } from "../stack";
+import { stackServerApp } from "./stack";
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import './globals.css'
+import { ThemeProvider } from "next-themes";
 
 export const metadata: Metadata = {
   title: 'Notes Dashboard',
@@ -16,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <style>{`
 html {
@@ -26,7 +27,14 @@ html {
 }
         `}</style>
       </head>
-      <body><StackProvider app={stackServerApp}><StackTheme>{children}</StackTheme></StackProvider></body>
+      <ThemeProvider 
+        attribute="class" 
+        defaultTheme="dark" 
+        enableSystem={false}
+        forcedTheme="dark"
+      >
+        <body><StackProvider app={stackServerApp}><StackTheme>{children}</StackTheme></StackProvider></body>
+      </ThemeProvider>
     </html>
   )
 }

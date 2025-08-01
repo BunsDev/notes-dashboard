@@ -2,23 +2,35 @@
 
 import { eq, desc, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { db } from "./index";
-import { notes, categories, users, type Note, type NewNote } from "./schema";
+import { db } from ".";
+import { categories, Note, notes, users, type NewNote } from "./schema";
+import { getCurrentUser } from "../api/users";
+import { redirect } from "next/navigation";
 
 // ===== NOTE OPERATIONS =====
 
 /**
- * Get all notes with their categories
+ * Get all notes with their categories for the current authenticated user
  */
 export async function getNotes() {
   try {
+    const user = await getCurrentUser();
+    
+    if (!user) {
+      return {
+        success: false,
+        error: "Authentication required"
+      };
+    }
+    
     const data = await db.query.notes.findMany({
+      where: eq(notes.author, user.id),
       with: {
         category: true,
       },
       orderBy: [
         desc(notes.isPinned), 
-        desc(notes.updatedAt)
+        desc(notes.updated)
       ],
     });
     return { success: true, data };
@@ -32,17 +44,47 @@ export async function getNotes() {
 }
 
 /**
- * Get a note by ID
+ * Get a note by ID (only if the current user is the author)
  */
-export async function getNoteById(id: number) {
+export async function getNoteById(id: string) {
   try {
+    const user = await getCurrentUser();
+    
+    if (!user) {
+      return {
+        success: false,
+        error: "Authentication required"
+      };
+    }
+    
+    // Convert string ID to number for database query
+    const numericId = parseInt(id, 10);
+    
+    if (isNaN(numericId)) {
+      return {
+        success: false,
+        error: "Invalid note ID format"
+      };
+    }
+    
     const data = await db.query.notes.findFirst({
-      where: eq(notes.id, id),
+      where: and(
+        eq(notes.id, numericId),
+        eq(notes.author, user.id)
+      ),
       with: { category: true },
     });
+    
+    if (!data) {
+      return { 
+        success: false, 
+        error: "Note not found or you don't have permission to access it" 
+      };
+    }
+    
     return { 
       success: true, 
-      data: data || null 
+      data: data 
     };
   } catch (error) {
     console.error(`Error fetching note with ID ${id}:`, error);
@@ -54,15 +96,25 @@ export async function getNoteById(id: number) {
 }
 
 /**
- * Create a new note
+ * Create a new note for the current authenticated user
  */
 export async function createNote(note: NewNote) {
   try {
+    const user = await getCurrentUser();
+    
+    if (!user) {
+      return {
+        success: false,
+        error: "Authentication required"
+      };
+    }
+    
     await db.insert(notes).values({
       ...note,
+      author: user.id, // Ensure the current user is set as the author
       isPinned: note.isPinned ?? false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      created: new Date(),
+      updated: new Date(),
     });
     
     revalidatePath('/');
@@ -77,16 +129,53 @@ export async function createNote(note: NewNote) {
 }
 
 /**
- * Update a note
+ * Update a note (only if the current user is the author)
  */
-export async function updateNote(id: number, note: Partial<Note>) {
+export async function updateNote(id: string, note: Partial<Note>) {
   try {
+    const user = await getCurrentUser();
+    
+    if (!user) {
+      return {
+        success: false,
+        error: "Authentication required"
+      };
+    }
+    
+    // Convert string ID to number for database query
+    const numericId = parseInt(id, 10);
+    
+    if (isNaN(numericId)) {
+      return {
+        success: false,
+        error: "Invalid note ID format"
+      };
+    }
+    
+    // First check if the note exists and belongs to this user
+    const existingNote = await db.query.notes.findFirst({
+      where: and(
+        eq(notes.id, numericId),
+        eq(notes.author, user.id)
+      ),
+    });
+    
+    if (!existingNote) {
+      return {
+        success: false,
+        error: "Note not found or you don't have permission to update it"
+      };
+    }
+    
     await db.update(notes)
       .set({
         ...note,
-        updatedAt: new Date(),
+        updated: new Date(),
       })
-      .where(eq(notes.id, id));
+      .where(and(
+        eq(notes.id, numericId),
+        eq(notes.author, user.id)
+      ));
       
     revalidatePath('/');
     return { success: true };
@@ -100,11 +189,51 @@ export async function updateNote(id: number, note: Partial<Note>) {
 }
 
 /**
- * Delete a note
+ * Delete a note (only if the current user is the author)
  */
-export async function deleteNote(id: number) {
+export async function deleteNote(id: string) {
   try {
-    await db.delete(notes).where(eq(notes.id, id));
+    const user = await getCurrentUser();
+    
+    if (!user) {
+      return {
+        success: false,
+        error: "Authentication required"
+      };
+    }
+    
+    // Convert string ID to number for database query
+    const numericId = parseInt(id, 10);
+    
+    if (isNaN(numericId)) {
+      return {
+        success: false,
+        error: "Invalid note ID format"
+      };
+    }
+    
+    // First check if the note exists and belongs to this user
+    const existingNote = await db.query.notes.findFirst({
+      where: and(
+        eq(notes.id, numericId),
+        eq(notes.author, user.id)
+      ),
+    });
+    
+    if (!existingNote) {
+      return {
+        success: false,
+        error: "Note not found or you don't have permission to delete it"
+      };
+    }
+    
+    await db.delete(notes).where(
+      and(
+        eq(notes.id, numericId),
+        eq(notes.author, user.id)
+      )
+    );
+    
     revalidatePath('/');
     return { success: true };
   } catch (error) {
@@ -117,20 +246,42 @@ export async function deleteNote(id: number) {
 }
 
 /**
- * Toggle note pin status
+ * Toggle note pin status (only if the current user is the author)
  */
-export async function toggleNotePin(id: number) {
+export async function toggleNotePin(id: string) {
   try {
-    // First get the current pin status
+    const user = await getCurrentUser();
+    
+    if (!user) {
+      return {
+        success: false,
+        error: "Authentication required"
+      };
+    }
+    
+    // Convert string ID to number for database query
+    const numericId = parseInt(id, 10);
+    
+    if (isNaN(numericId)) {
+      return {
+        success: false,
+        error: "Invalid note ID format"
+      };
+    }
+    
+    // First get the current pin status and check ownership
     const note = await db.query.notes.findFirst({
-      where: eq(notes.id, id),
+      where: and(
+        eq(notes.id, numericId),
+        eq(notes.author, user.id)
+      ),
       columns: { isPinned: true }
     });
     
     if (!note) {
       return { 
         success: false, 
-        error: "Note not found" 
+        error: "Note not found or you don't have permission to modify it" 
       };
     }
     
@@ -138,9 +289,12 @@ export async function toggleNotePin(id: number) {
     await db.update(notes)
       .set({ 
         isPinned: !note.isPinned,
-        updatedAt: new Date() 
+        updated: new Date() 
       })
-      .where(eq(notes.id, id));
+      .where(and(
+        eq(notes.id, numericId),
+        eq(notes.author, user.id)
+      ));
       
     revalidatePath('/');
     return { success: true };
@@ -154,16 +308,38 @@ export async function toggleNotePin(id: number) {
 }
 
 /**
- * Get notes by category
+ * Get notes by category (only for the current authenticated user)
  */
-export async function getNotesByCategory(categoryId: number) {
+export async function getNotesByCategory(categoryId: string) {
   try {
+    const user = await getCurrentUser();
+    
+    if (!user) {
+      return {
+        success: false,
+        error: "Authentication required"
+      };
+    }
+    
+    // Convert string ID to number for database query
+    const numericCategoryId = parseInt(categoryId, 10);
+    
+    if (isNaN(numericCategoryId)) {
+      return {
+        success: false,
+        error: "Invalid category ID format"
+      };
+    }
+    
     const data = await db.query.notes.findMany({
-      where: eq(notes.categoryId, categoryId),
+      where: and(
+        eq(notes.categoryId, numericCategoryId),
+        eq(notes.author, user.id)
+      ),
       with: { category: true },
       orderBy: [
         desc(notes.isPinned), 
-        desc(notes.updatedAt)
+        desc(notes.updated)
       ],
     });
     return { success: true, data };

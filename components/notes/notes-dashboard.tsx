@@ -12,16 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import NotesJSON from "@/lib/notes/notes.json"
-
-interface Note {
-  id: string
-  title: string
-  content: string
-  category: string
-  isPinned: boolean
-  createdAt: Date
-  updatedAt: Date
-}
+import { Note } from "@/lib/types"
 
 const categories = [
   { id: "technical", label: "Technical", icon: Code, color: "bg-blue-100 text-blue-800" },
@@ -32,8 +23,8 @@ const categories = [
 
 const initialNotes: Note[] = NotesJSON.map((note) => ({
   ...note,
-  createdAt: new Date(note.createdAt),
-  updatedAt: new Date(note.updatedAt),
+  created: new Date(note.created),
+  updated: new Date(note.updated),
 }))
 
 export function NotesDashboard() {
@@ -97,9 +88,10 @@ export function NotesDashboard() {
       title: newNote.title,
       content: newNote.content,
       category: newNote.category,
+      urls: [],
       isPinned: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      created: new Date(),
+      updated: new Date(),
     }
 
     setNotes((prev) => [note, ...prev])
@@ -122,6 +114,14 @@ export function NotesDashboard() {
 
   const getCategoryInfo = (categoryId: string) => {
     return categories.find((cat) => cat.id === categoryId) || categories[0]
+  }
+
+  const getNoteInfo = (noteId: string) => {
+    return notes.find((note) => note.id === noteId) || notes[0]
+  }
+
+  const getUrls = (noteId: string) => {
+    return getNoteInfo(noteId).urls
   }
 
   return (
@@ -227,6 +227,7 @@ export function NotesDashboard() {
                   onTogglePin={togglePin}
                   onEdit={setEditingNote}
                   onDelete={deleteNote}
+                  getUrls={getUrls}
                   getCategoryInfo={getCategoryInfo}
                 />
               ))}
@@ -252,6 +253,7 @@ export function NotesDashboard() {
                   onEdit={setEditingNote}
                   onDelete={deleteNote}
                   getCategoryInfo={getCategoryInfo}
+                  getUrls={getUrls}
                 />
               ))}
             </div>
@@ -274,50 +276,7 @@ export function NotesDashboard() {
           </div>
         )}
 
-        {/* Edit Note Dialog */}
-        <Dialog open={!!editingNote} onOpenChange={() => setEditingNote(null)}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Edit Note</DialogTitle>
-            </DialogHeader>
-            {editingNote && (
-              <div className="space-y-4">
-                <Input
-                  placeholder="Note title"
-                  value={editingNote.title}
-                  onChange={(e) => setEditingNote({ ...editingNote, title: e.target.value })}
-                />
-                <Select
-                  value={editingNote.category}
-                  onValueChange={(value) => setEditingNote({ ...editingNote, category: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Textarea
-                  placeholder="Note content"
-                  value={editingNote.content}
-                  onChange={(e) => setEditingNote({ ...editingNote, content: e.target.value })}
-                  rows={8}
-                />
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setEditingNote(null)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={updateNote}>Update Note</Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+        
       </div>
     </div>
   )
@@ -329,9 +288,10 @@ interface NoteCardProps {
   onEdit: (note: Note) => void
   onDelete: (id: string) => void
   getCategoryInfo: (categoryId: string) => any
+  getUrls: (noteId: string) => string[]
 }
 
-function NoteCard({ note, onTogglePin, onEdit, onDelete, getCategoryInfo }: NoteCardProps) {
+function NoteCard({ note, onTogglePin, onEdit, onDelete, getCategoryInfo, getUrls }: NoteCardProps) {
   const categoryInfo = getCategoryInfo(note.category)
   const CategoryIcon = categoryInfo.icon
 
@@ -367,7 +327,7 @@ function NoteCard({ note, onTogglePin, onEdit, onDelete, getCategoryInfo }: Note
           <p className="text-sm text-gray-600 whitespace-pre-wrap">{note.content}</p>
         </ScrollArea>
         <div className="mt-3 pt-3 border-t">
-          <p className="text-xs text-gray-400">Updated {note.updatedAt.toLocaleDateString()}</p>
+          <p className="text-xs text-gray-400">Updated {note.updated.toLocaleDateString()}</p>
         </div>
       </CardContent>
     </Card>

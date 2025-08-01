@@ -103,9 +103,10 @@ export const notes = pgTable('notes', {
   title: varchar('title', { length: 255 }).notNull(),
   content: text('content').notNull(),
   categoryId: serial('category_id').references(() => categories.id),
+  urls: text('urls').array(),
   isPinned: boolean('is_pinned').default(false).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  created: timestamp('created_at').defaultNow().notNull(),
+  updated: timestamp('updated_at').defaultNow().notNull(),
 });
 
 // Relations and query schemas
@@ -122,18 +123,20 @@ export const notesRelations = relations(notes, ({ one }) => ({
 ```typescript
 // Type definitions for frontend use
 export interface Note {
-  id: number;
+  id: string;
   title: string;
+  author: string;
   content: string;
-  categoryId: number;
+  categoryId: string;
   category?: Category; // From join
+  urls: string[];
   isPinned: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  created: Date;
+  updated: Date;
 }
 
 export interface Category {
-  id: number;
+  id: string;
   name: string;
   slug: string;
   icon: string;
@@ -279,19 +282,19 @@ export async function getNotes() {
 }
 
 // Create a new note
-export async function createNote(note: { title: string; content: string; categoryId: number }) {
+export async function createNote(note: { title: string; content: string; categoryId: string }) {
   await db.insert(notes).values({
     ...note,
     isPinned: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    created: new Date(),
+    updated: new Date(),
   });
   
   revalidatePath('/'); // Refresh data
 }
 
 // Update an existing note
-export async function updateNote(id: number, note: Partial<{ title: string; content: string; categoryId: number; isPinned: boolean }>) {
+export async function updateNote(id: string, note: Partial<{ title: string; content: string; categoryId: string; isPinned: boolean }>) {
   await db.update(notes)
     .set({
       ...note,
@@ -303,13 +306,13 @@ export async function updateNote(id: number, note: Partial<{ title: string; cont
 }
 
 // Delete a note
-export async function deleteNote(id: number) {
+export async function deleteNote(id: string) {
   await db.delete(notes).where(eq(notes.id, id));
   revalidatePath('/');
 }
 
 // Toggle pin status
-export async function toggleNotePin(id: number, isPinned: boolean) {
+export async function toggleNotePin(id: string, isPinned: boolean) {
   await db.update(notes)
     .set({ isPinned: !isPinned, updatedAt: new Date() })
     .where(eq(notes.id, id));

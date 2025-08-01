@@ -1,41 +1,42 @@
 [
-    {     "id": "1",
+  {
+    "id": "1",
     "title": "STAR Method",
-    "content":
-      "Situation: Set the context\nTask: Describe what you needed to accomplish\nAction: Explain what you did\nResult: Share the outcome",
+    "content": "Situation: Set the context\nTask: Describe what you needed to accomplish\nAction: Explain what you did\nResult: Share the outcome",
     "category": "behavioral",
+    "urls": [],
     "isPinned": true,
-    "createdAt": "2024-01-15",
-    "updatedAt": "2024-01-15"
+    "created": "2024-01-15",
+    "updated": "2024-01-15"
   },
   {
     "id": "2",
     "title": "React Hooks Rules",
-    "content":
-      "1. Only call hooks at the top level\n2. Only call hooks from React functions\n3. Use ESLint plugin for hooks\n4. useState for state, useEffect for side effects",
+    "content": "1. Only call hooks at the top level\n2. Only call hooks from React functions\n3. Use ESLint plugin for hooks\n4. useState for state, useEffect for side effects",
     "category": "technical",
+    "urls": [],
     "isPinned": true,
-    "createdAt": "2024-01-16",
-    "updatedAt": "2024-01-16"
+    "created": "2024-01-16",
+    "updated": "2024-01-16"
   },
   {
     "id": "3",
     "title": "Time Complexity Cheat Sheet",
-    "content":
-      "O(1) - Constant\nO(log n) - Logarithmic\nO(n) - Linear\nO(n log n) - Linearithmic\nO(n²) - Quadratic\nO(2^n) - Exponential",
+    "content": "O(1) - Constant\nO(log n) - Logarithmic\nO(n) - Linear\nO(n log n) - Linearithmic\nO(n²) - Quadratic\nO(2^n) - Exponential",
     "category": "concepts",
+    "urls": [],
     "isPinned": false,
-    "createdAt": "2024-01-17",
-    "updatedAt": "2024-01-17"
+    "created": "2024-01-17",
+    "updated": "2024-01-17"
   },
   {
     "id": "4",
     "title": "Questions to Ask Interviewer",
-    "content":
-      "• What does a typical day look like?\n• What are the biggest challenges facing the team?\n• How do you measure success in this role?\n• What opportunities are there for growth?",
+    "content": "• What does a typical day look like?\n• What are the biggest challenges facing the team?\n• How do you measure success in this role?\n• What opportunities are there for growth?",
     "category": "tips",
+    "urls": [],
     "isPinned": true,
-    "createdAt": "2024-01-18",
-    "updatedAt": "2024-01-18"
+    "created": "2024-01-18",
+    "updated": "2024-01-18"
   }
 ]

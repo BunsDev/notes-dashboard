@@ -17,18 +17,20 @@ export const categories = pgTable('categories', {
   slug: varchar('slug', { length: 50 }).notNull().unique(),
   icon: varchar('icon', { length: 50 }).notNull(),
   color: varchar('color', { length: 50 }).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
+  created: timestamp('created_at').defaultNow().notNull(),
 });
 
 // Notes table
 export const notes = pgTable('notes', {
   id: serial('id').primaryKey(),
+  author: varchar('author', { length: 128 }).notNull(),
   title: varchar('title', { length: 255 }).notNull(),
   content: text('content').notNull(),
   categoryId: serial('category_id').references(() => categories.id).notNull(),
+  urls: text('urls').array(),
   isPinned: boolean('is_pinned').default(false).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  created: timestamp('created_at').defaultNow().notNull(),
+  updated: timestamp('updated_at').defaultNow().notNull(),
 });
 
 // User table (for future authentication)
@@ -36,8 +38,8 @@ export const users = pgTable('users', {
   id: varchar('id', { length: 128 }).primaryKey().$defaultFn(() => createId()),
   name: varchar('name', { length: 255 }),
   email: varchar('email', { length: 255 }).unique(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  created: timestamp('created_at').defaultNow().notNull(),
+  updated: timestamp('updated_at').defaultNow().notNull(),
 });
 
 // Relations

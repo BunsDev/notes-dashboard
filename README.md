@@ -1,0 +1,3 @@
+# Notes Dashboard
+
+Developers often need to quickly reference their personal notes during interviews, live streams, meetings, or pair programming sessions. While existing tools like Notion, Google Keep, and Evernote offer rich note-taking experiences, they can be overkill or slow to access in high-pressure situations. This notes application is being developed to provide a lightweight, fast-access, web-based dashboard tailored specifically for developers. It emphasizes speed, simplicity, and easy categorization for context-specific note-taking.
