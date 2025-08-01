@@ -21,12 +21,12 @@ export async function GET(request: NextRequest) {
 		if (!currentUser) {
 			return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 		}
-		console.log("/api/users GET: Current user", currentUser);
+		// console.log("/api/users GET: Current user", currentUser);
 
 		// Check if a specific user ID is requested
 		const { searchParams } = new URL(request.url);
 		const userId = searchParams.get("id");
-		console.log("/api/users GET: User ID", userId);
+		// console.log("/api/users GET: User ID", userId);
 
 		if (userId) {
 			// For now, a user can only access their own data
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
 			
 			// Get specific user
 			const result = await getUserById(userId);
-			console.log("/api/users GET: Found user", result);
+			// console.log("/api/users GET: Found user", result);
 			
 			// If user doesn't exist in our database yet, create them
 			if (!result.success || !result.data) {
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
 				
 				try {
 					await db.insert(users).values(newUser);
-					console.log("/api/users GET: User created successfully", newUser);
+					// console.log("/api/users GET: User created successfully", newUser);
 					return NextResponse.json({ user: newUser, created: true });
 				} catch (createError) {
 					console.error("Error creating user:", createError);
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
 		} else {
 			// Default to returning current user profile
 			const result = await getUserById(currentUser.id);
-			console.log("/api/users GET: Found user", result);
+			// console.log("/api/users GET: Found user", result);
 
 			// If user doesn't exist in our database yet, create them
 			if (!result.success || !result.data) {
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
 				
 				try {
 					await db.insert(users).values(newUser);
-					console.log("/api/users GET: User created successfully", newUser);
+					// console.log("/api/users GET: User created successfully", newUser);
 					return NextResponse.json({ user: newUser, created: true });
 				} catch (createError) {
 					console.error("Error creating user:", createError);
@@ -120,7 +120,7 @@ export async function PUT(request: NextRequest) {
 	try {
 		// Get authenticated user
 		const currentUser = await getCurrentUser();
-		console.log("/api/users PUT: Current user", currentUser);
+		// console.log("/api/users PUT: Current user", currentUser);
 		if (!currentUser) {
 			return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 		}
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
 		// Get authenticated user - only allow creation for authenticated users
 		// Future: Add admin check for creating other users
 		const currentUser = await getCurrentUser();
-		console.log("/api/users POST: Current user", currentUser);
+		// console.log("/api/users POST: Current user", currentUser);
 		if (!currentUser) {
 			return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 		}
@@ -193,6 +193,7 @@ export async function DELETE(request: NextRequest) {
 	try {
 		// Get authenticated user
 		const currentUser = await getCurrentUser();
+		// console.log("/api/users DELETE: Current user", currentUser);
 		if (!currentUser) {
 			return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 		}

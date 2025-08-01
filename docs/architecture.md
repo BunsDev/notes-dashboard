@@ -149,8 +149,9 @@ export interface Category {
 Predefined categories for organizing notes (stored in the database):
 - Technical (code-related topics)
 - Behavioral (interview behavior questions)
+- About (miscellaneous helpful information)
 - Concepts (theoretical knowledge)
-- Tips & Tricks (miscellaneous helpful information)
+- Tips (miscellaneous helpful information)
 
 The initial categories are seeded to the database during migration setup:
 
@@ -177,13 +178,19 @@ export async function seedCategories() {
         color: 'bg-green-100 text-green-800' 
       },
       { 
+        name: 'About', 
+        slug: 'about', 
+        icon: 'FileText', 
+        color: 'bg-purple-100 text-purple-800' 
+      },
+      { 
         name: 'Concepts', 
         slug: 'concepts', 
         icon: 'BookOpen', 
         color: 'bg-purple-100 text-purple-800' 
       },
       { 
-        name: 'Tips & Tricks', 
+        name: 'Tips', 
         slug: 'tips', 
         icon: 'Lightbulb', 
         color: 'bg-yellow-100 text-yellow-800' 

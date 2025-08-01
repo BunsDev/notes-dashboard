@@ -68,7 +68,9 @@ export async function POST(request: NextRequest) {
             title: body.title,
             userId: user.id,
             content: body.content,
-            categoryId: body.categoryId,
+            categoryId: body.categoryId || "1",
+            created: new Date(),
+            updated: new Date(),
             urls: body.urls || [],
             isPinned: body.isPinned || false,
         };

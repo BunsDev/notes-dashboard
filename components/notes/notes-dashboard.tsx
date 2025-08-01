@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { Search, Pin, PinOff, Edit, Trash2, BookOpen, Code, Users, Lightbulb, Plus } from "lucide-react"
+import { Search, Pin, PinOff, Edit, Trash2, BookOpen, Code, Users, Lightbulb, Plus, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,16 +18,17 @@ import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@radix-ui/rea
 import { DialogHeader } from "@/components/ui/dialog"
 
 const categories = [
-  { id: "technical", label: "Technical", icon: Code, color: "bg-blue-100 text-blue-800" },
-  { id: "behavioral", label: "Behavioral", icon: Users, color: "bg-green-100 text-green-800" },
-  { id: "concepts", label: "Concepts", icon: BookOpen, color: "bg-purple-100 text-purple-800" },
-  { id: "tips", label: "Tips & Tricks", icon: Lightbulb, color: "bg-yellow-100 text-yellow-800" },
+  { id: 1, label: "Technical", icon: Code, color: "bg-blue-100 text-blue-800" },
+  { id: 2, label: "Behavioral", icon: Users, color: "bg-green-100 text-green-800" },
+  { id: 3, label: "About", icon: FileText, color: "bg-blue-100 text-blue-800" },
+  { id: 4, label: "Concepts", icon: BookOpen, color: "bg-purple-100 text-purple-800" },
+  { id: 5, label: "Tips", icon: Lightbulb, color: "bg-yellow-100 text-yellow-800" },
 ]
 
 export function NotesDashboard() {
   const [notes, setNotes] = useState<Note[]>([])
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [selectedCategory, setSelectedCategory] = useState<number>(1)
   const [editingNote, setEditingNote] = useState<Note | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
@@ -72,8 +73,9 @@ export function NotesDashboard() {
           id: note.id.toString(),
           title: note.title,
           content: note.content,
+          // userId: note.user_id,
           // Map categoryId from database to frontend category property
-          category: note.category?.id?.toString() || "1",
+          categoryId: note.category?.id || 1,
           // Ensure urls is always an array
           urls: note.urls || [],
           isPinned: note.isPinned,
@@ -102,7 +104,7 @@ export function NotesDashboard() {
       const matchesSearch =
         note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         note.content.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesCategory = selectedCategory === "all" || note.category === selectedCategory
+      const matchesCategory = selectedCategory === 1 || Number(note.categoryId) === selectedCategory
       return matchesSearch && matchesCategory
     })
   }, [notes, searchQuery, selectedCategory])
@@ -168,7 +170,7 @@ export function NotesDashboard() {
     }
   }
 
-  const getCategoryInfo = (categoryId: string) => {
+  const getCategoryInfo = (categoryId: number) => {
     return categories.find((cat) => cat.id === categoryId) || categories[0]
   }
 
@@ -201,9 +203,9 @@ export function NotesDashboard() {
               className="pl-10"
             />
           </div>
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <Select value={selectedCategory.toString()} onValueChange={(value: number) => setSelectedCategory(Number(value))}>
             <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="All Categories" />
+              <SelectValue placeholder={selectedCategory.toString()} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
@@ -283,7 +285,7 @@ export function NotesDashboard() {
             <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No notes found</h3>
             <p className="text-gray-600 mb-4">
-              {searchQuery || selectedCategory !== "all"
+              {searchQuery || selectedCategory !== 1
                 ? "Try adjusting your search or filter"
                 : "Create your first note to get started."}
             </p>
@@ -318,10 +320,10 @@ export function NotesDashboard() {
           </DialogTrigger>
           <div className="space-y-2">
             <Button
-              variant={selectedCategory === "all" ? "default" : "outline"}
+              variant={selectedCategory === 1 ? "default" : "outline"}
               className="w-full justify-start"
               onClick={() => {
-                setSelectedCategory("all")
+                setSelectedCategory(1)
                 setIsCategoryDialogOpen(false)
               }}
             >
@@ -333,7 +335,7 @@ export function NotesDashboard() {
               return (
                 <Button
                   key={category.id}
-                  variant={selectedCategory === category.id ? "default" : "outline"}
+                  variant={selectedCategory === Number(category.id) ? "default" : "outline"}
                   className="w-full justify-start"
                   onClick={() => {
                     setSelectedCategory(category.id)
@@ -356,12 +358,12 @@ interface NoteCardProps {
   onTogglePin: (id: string) => void
   onEdit: (note: Note) => void
   onDelete: (id: string) => void
-  getCategoryInfo: (categoryId: string) => any
+  getCategoryInfo: (categoryId: number) => any
   getUrls: (noteId: string) => string[]
 }
 
 function NoteCard({ note, onTogglePin, onEdit, onDelete, getCategoryInfo, getUrls }: NoteCardProps) {
-  const categoryInfo = getCategoryInfo(note.category)
+  const categoryInfo = getCategoryInfo(Number(note.category))
   const CategoryIcon = categoryInfo.icon
 
   return (

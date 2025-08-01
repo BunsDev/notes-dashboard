@@ -110,13 +110,40 @@ export async function createNote(note: NewNote) {
       };
     }
 
-    await db.insert(notes).values({
-      ...note,
-      userId: user.id, // Ensure the current user is set as the author
-      isPinned: note.isPinned ?? false,
-      created: new Date(),
-      updated: new Date(),
+    // Check if user exists in our database
+    const existingUser = await db.query.users.findFirst({
+      where: eq(users.id, user.id)
     });
+
+    // If user doesn't exist, create them first
+    if (!existingUser) {
+      try {
+        // Create the user record using auth information
+        await db.insert(users).values({
+          id: user.id,
+          name: user.displayName || null,
+          email: user.primaryEmail || null,
+          created: new Date(),
+          updated: new Date()
+        });
+        
+        console.log("Created new user for note creation:", user.id);
+      } catch (userError) {
+        console.error("Error creating user record:", userError);
+        return {
+          success: false,
+          error: "Failed to create user record"
+        };
+      }
+    }
+    
+    // Now create the note with the authenticated user ID
+    const noteWithCorrectUser = {
+      ...note,
+      userId: user.id
+    };
+
+    await db.insert(notes).values(noteWithCorrectUser);
 
     revalidatePath('/');
     return { success: true };
