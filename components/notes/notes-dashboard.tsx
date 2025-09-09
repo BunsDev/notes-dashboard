@@ -3,7 +3,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { Search, Pin, PinOff, Edit, Trash2, BookOpen, Code, Users, Lightbulb, Plus, FileText, Eye } from "lucide-react"
+import { Search, Pin, PinOff, Edit, Trash2, BookOpen, Code, Users, Lightbulb, Plus, FileText, Eye, Grid3X3, List, LogIn } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@radix-ui/rea
 import { DialogHeader } from "@/components/ui/dialog"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 
 const categories = [
   { id: 0, label: "All Categories", icon: Code, color: "bg-blue-100 text-blue-800" },
@@ -41,6 +42,7 @@ export function NotesDashboard() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false)
   const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; noteId: string; noteTitle: string }>({ isOpen: false, noteId: "", noteTitle: "" })
+  const [layoutMode, setLayoutMode] = useState<"grid" | "list">("grid")
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -198,7 +200,13 @@ export function NotesDashboard() {
             <h1 className="text-3xl font-bold text-foreground mb-2">Interview Notes Dashboard</h1>
             <p className="text-muted-foreground">Quick access to your interview preparation notes</p>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <LogIn className="h-4 w-4" />
+              Login
+            </Button>
+            <ThemeToggle />
+          </div>
         </div>
 
         {/* Search and Controls */}
@@ -213,6 +221,14 @@ export function NotesDashboard() {
               className="pl-10"
             />
           </div>
+          <ToggleGroup type="single" value={layoutMode} onValueChange={(value) => value && setLayoutMode(value as "grid" | "list")}>
+            <ToggleGroupItem value="grid" aria-label="Grid view">
+              <Grid3X3 className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="list" aria-label="List view">
+              <List className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
           <Select value={selectedCategory.toString()}
             onValueChange={(value: string) => setSelectedCategory(Number(value))}
             defaultValue={selectedCategory.toString()}
@@ -252,7 +268,7 @@ export function NotesDashboard() {
               <h2 className="text-xl font-semibold text-foreground">Pinned Notes</h2>
               <Badge variant="secondary">{pinnedNotes.length}</Badge>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className={layoutMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}>
               {pinnedNotes.map((note) => (
                 <NoteCard
                   key={note.id}
@@ -263,6 +279,7 @@ export function NotesDashboard() {
                   onView={setViewingNote}
                   getUrls={getUrls}
                   getCategoryInfo={getCategoryInfo}
+                  layoutMode={layoutMode}
                 />
               ))}
             </div>
@@ -278,7 +295,7 @@ export function NotesDashboard() {
               <h2 className="text-xl font-semibold text-foreground">All Notes</h2>
               <Badge variant="secondary">{unpinnedNotes.length}</Badge>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className={layoutMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}>
               {unpinnedNotes.map((note) => (
                 <NoteCard
                   key={note.id}
@@ -289,6 +306,7 @@ export function NotesDashboard() {
                   onView={setViewingNote}
                   getCategoryInfo={getCategoryInfo}
                   getUrls={getUrls}
+                  layoutMode={layoutMode}
                 />
               ))}
             </div>
@@ -366,25 +384,54 @@ interface NoteCardProps {
   onView: (note: Note) => void
   getCategoryInfo: (categoryId: number) => any
   getUrls: (noteId: string) => string[]
+  layoutMode: "grid" | "list"
 }
 
-function NoteCard({ note, onTogglePin, onEdit, onDelete, onView, getCategoryInfo, getUrls }: NoteCardProps) {
+function NoteCard({ note, onTogglePin, onEdit, onDelete, onView, getCategoryInfo, getUrls, layoutMode }: NoteCardProps) {
   const categoryInfo = getCategoryInfo(note.categoryId)
   const CategoryIcon = categoryInfo.icon
 
-  const handleCardClick = (e: React.MouseEvent) => {
-    // Don't open note if clicking on action buttons
-    if ((e.target as HTMLElement).closest('button')) {
-      return
-    }
-    onView(note)
+  if (layoutMode === "list") {
+    return (
+      <Card className="group hover:shadow-md transition-shadow">
+        <div className="flex items-center p-4 gap-4">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <CategoryIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <h3 className="font-medium truncate">{note.title}</h3>
+              <p className="text-sm text-gray-600 truncate mt-1">{note.content}</p>
+              <div className="flex items-center gap-2 mt-2">
+                <Badge className={`text-xs ${categoryInfo.color}`}>{categoryInfo.label}</Badge>
+                <span className="text-xs text-gray-400">Updated {note.updated.toLocaleDateString()}</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onTogglePin(note.id.toString()) }} className="h-8 w-8 p-0">
+              {note.isPinned ? <PinOff className="h-4 w-4 text-orange-500" /> : <Pin className="h-4 w-4" />}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onView(note) }} className="h-8 w-8 p-0">
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onEdit(note) }} className="h-8 w-8 p-0">
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => { e.stopPropagation(); onDelete(note.id.toString(), note.title) }}
+              className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </Card>
+    )
   }
 
   return (
-    <Card 
-      className="group hover:shadow-md transition-shadow cursor-pointer" 
-      onClick={handleCardClick}
-    >
+    <Card className="group hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2 flex-1 min-w-0">

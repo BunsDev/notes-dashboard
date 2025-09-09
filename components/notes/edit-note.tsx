@@ -88,19 +88,19 @@ const markdownStyles = `
 // Dynamically import the Markdown editor to avoid SSR issues
 // @ts-ignore - Using any type to avoid TypeScript errors
 const MDEditor = dynamic(
-  () => import('@uiw/react-md-editor').then((mod) => {
-    return mod.default;
-  }),
-  { ssr: false }
+    () => import('@uiw/react-md-editor').then((mod) => {
+        return mod.default;
+    }),
+    { ssr: false }
 );
 
 // Dynamically import the Markdown preview component
 // @ts-ignore - Using any type to avoid TypeScript errors with markdown editor
 const MarkdownPreview = dynamic(
-  () => import('@uiw/react-md-editor').then((mod) => {
-    return mod.default.Markdown;
-  }),
-  { ssr: false }
+    () => import('@uiw/react-md-editor').then((mod) => {
+        return mod.default.Markdown;
+    }),
+    { ssr: false }
 );
 
 interface EditNoteProps {
@@ -122,12 +122,12 @@ export function EditNote({ categories, editingNote, setEditingNote, onSuccess, i
     const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit");
     return (
         <Dialog open={!!editingNote || isOpen} onOpenChange={onOpenChange ? onOpenChange : () => setEditingNote(null)}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="flex flex-col justify-center items-center max-w-screen-2xl lg:h-[calc(100vh-12rem)] h-[calc(100vh-4rem)] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Edit Note</DialogTitle>
                 </DialogHeader>
                 {editingNote && (
-                    <div className="space-y-4">
+                    <div className="space-y-2 h-full justify-between items-center w-full">
                         <Input
                             placeholder="Note title"
                             value={editingNote.title}
@@ -149,7 +149,7 @@ export function EditNote({ categories, editingNote, setEditingNote, onSuccess, i
                             </SelectContent>
                         </Select>
                         <Tabs value={activeTab} onValueChange={(value: string) => setActiveTab(value as "edit" | "preview")}>
-                            <TabsList className="grid w-full grid-cols-2 mb-2">
+                            <TabsList className="grid w-full grid-cols-2 mb-2 h-full">
                                 <TabsTrigger value="edit" className="flex items-center gap-2">
                                     {/* @ts-ignore - lucide-react icons are imported correctly */}
                                     <Edit className="h-4 w-4" />
@@ -161,45 +161,44 @@ export function EditNote({ categories, editingNote, setEditingNote, onSuccess, i
                                     Preview
                                 </TabsTrigger>
                             </TabsList>
-                            <TabsContent value="edit" className="mt-0 overflow-y-auto">
-                                <>
-                                    {/* Add the markdown styles */}
-                                    <style jsx global>{markdownStyles}</style>
-                                    
-                                    <div data-color-mode="dark" className="markdown-container bg-background/80 rounded-2xl border border-gray-700 p-2">
-                                        <MDEditor
-                                            value={editingNote.content}
-                                            /* @ts-ignore - proper type handling for MDEditor */
-                                            // @ts-ignore - proper handling for onChange prop
-                                            onChange={(val) => setEditingNote({ ...editingNote, content: val || "" })}
-                                            preview="edit"
-                                            height={300}
-                                            toolbarHeight={40}
-                                            visibleDragbar={false}
-                                            textareaProps={{
-                                                placeholder: "Write your markdown note here...",
-                                                disabled: isSubmitting,
-                                            }}
-                                        />
-                                    </div>
-                                </>
+                            <TabsContent value="edit" className="mt-0 overflow-y-auto h-full flex flex-col">
+
+                                {/* Add the markdown styles */}
+                                <style jsx global>{markdownStyles}</style>
+
+                                <div data-color-mode="dark" className="markdown-container bg-background/80 rounded-2xl border border-gray-700 p-2 h-full w-full flex flex-col">
+                                    <MDEditor
+                                        value={editingNote.content}
+                                        /* @ts-ignore - proper type handling for MDEditor */
+                                        // @ts-ignore - proper handling for onChange prop
+                                        onChange={(val) => setEditingNote({ ...editingNote, content: val || "" })}
+                                        preview="edit"
+                                        height={300}
+                                        toolbarHeight={40}
+                                        visibleDragbar={false}
+                                        textareaProps={{
+                                            placeholder: "Write your markdown note here...",
+                                            disabled: isSubmitting,
+                                        }}
+                                        style={{ height: "100%" }}
+                                    />
+                                </div>
+
                             </TabsContent>
-                            <TabsContent value="preview" className="mt-0 overflow-y-auto">
-                                <>
-                                    {/* Add the markdown styles */}
-                                    <style jsx global>{markdownStyles}</style>
-                                    
-                                    <div className="min-h-[300px] overflow-y-auto bg-background/80 rounded-2xl border border-gray-700 p-2" data-color-mode="dark">
-                                        {editingNote.content ? (
-                                            <div className="markdown-body">
-                                                {/* @ts-ignore - proper type handling for MarkdownPreview */}
-                                                <MarkdownPreview source={editingNote.content} />
-                                            </div>
-                                        ) : (
-                                            <p className="text-muted-foreground italic">Preview will appear here...</p>
-                                        )}
-                                    </div>
-                                </>
+                            <TabsContent value="preview" className="mt-0 overflow-y-auto h-full flex flex-col">
+                                {/* Add the markdown styles */}
+                                <style jsx global>{markdownStyles}</style>
+
+                                <div className="flex flex-col min-h-full overflow-y-auto bg-background/80 rounded-2xl border border-gray-700 p-2" data-color-mode="dark">
+                                    {editingNote.content ? (
+                                        <div className="markdown-body">
+                                            {/* @ts-ignore - proper type handling for MarkdownPreview */}
+                                            <MarkdownPreview source={editingNote.content} />
+                                        </div>
+                                    ) : (
+                                        <p className="text-muted-foreground italic">Preview will appear here...</p>
+                                    )}
+                                </div>
                             </TabsContent>
                         </Tabs>
                         <div className="flex justify-end gap-2">
@@ -214,23 +213,23 @@ export function EditNote({ categories, editingNote, setEditingNote, onSuccess, i
                                 onClick={async () => {
                                     try {
                                         setIsSubmitting(true);
-                                                // Ensure categoryId is a valid number before sending to the server
+                                        // Ensure categoryId is a valid number before sending to the server
                                         const categoryId = Number(editingNote?.category);
-                                        
+
                                         if (isNaN(categoryId)) {
                                             toast.error("Invalid category selected");
                                             return;
                                         }
-                                        
+
                                         const result = await updateNote(editingNote?.id,
-                                                    {
-                                                        title: editingNote?.title,
-                                                        content: editingNote?.content,
-                                                        categoryId: categoryId,
-                                                        urls: editingNote?.urls,
-                                                        isPinned: editingNote?.isPinned,
-                                                        updated: new Date()
-                                                    });
+                                            {
+                                                title: editingNote?.title,
+                                                content: editingNote?.content,
+                                                categoryId: categoryId,
+                                                urls: editingNote?.urls,
+                                                isPinned: editingNote?.isPinned,
+                                                updated: new Date()
+                                            });
 
                                         if (result.success) {
                                             toast.success("Note updated successfully");
