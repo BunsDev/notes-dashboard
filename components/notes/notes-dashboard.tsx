@@ -393,7 +393,7 @@ function NoteCard({ note, onTogglePin, onEdit, onDelete, onView, getCategoryInfo
 
   if (layoutMode === "list") {
     return (
-      <Card className="group hover:shadow-md transition-shadow">
+      <Card className="group hover:shadow-md transition-shadow cursor-pointer" onClick={() => onView(note)}>
         <div className="flex items-center p-4 gap-4">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <CategoryIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
@@ -431,7 +431,7 @@ function NoteCard({ note, onTogglePin, onEdit, onDelete, onView, getCategoryInfo
   }
 
   return (
-    <Card className="group hover:shadow-md transition-shadow">
+    <Card className="group hover:shadow-md transition-shadow cursor-pointer" onClick={() => onView(note)}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2 flex-1 min-w-0">
