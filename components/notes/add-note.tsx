@@ -201,7 +201,7 @@ export function AddNote({ categories, onSuccess, isOpen: externalIsOpen, onOpenC
           New Note
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl resize" style={{ resize: 'both', minWidth: '500px', minHeight: '400px' }}>
         <DialogHeader>
           <DialogTitle>Create New Note</DialogTitle>
         </DialogHeader>

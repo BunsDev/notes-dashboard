@@ -107,7 +107,7 @@ export function NoteViewer({ note, isOpen, onOpenChange, getCategoryInfo }: Note
   
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="flex flex-col w-full max-w-screen-2xl max-h-[96vh] overflow-auto">
+      <DialogContent className="flex flex-col w-full max-w-screen-2xl max-h-[96vh] overflow-auto resize" style={{ resize: 'both', minWidth: '400px', minHeight: '300px' }}>
         <DialogHeader>
           <div className="flex items-center justify-between mb-2">
             <DialogTitle className="text-xl">{note.title}</DialogTitle>

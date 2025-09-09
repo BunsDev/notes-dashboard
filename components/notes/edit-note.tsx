@@ -122,7 +122,7 @@ export function EditNote({ categories, editingNote, setEditingNote, onSuccess, i
     const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit");
     return (
         <Dialog open={!!editingNote || isOpen} onOpenChange={onOpenChange ? onOpenChange : () => setEditingNote(null)}>
-            <DialogContent className="flex flex-col justify-center items-center max-w-screen-2xl lg:h-[calc(100vh-12rem)] h-[calc(100vh-4rem)] overflow-y-auto">
+            <DialogContent className="flex flex-col justify-center items-center max-w-screen-2xl lg:h-[calc(100vh-12rem)] h-[calc(100vh-4rem)] overflow-y-auto resize" style={{ resize: 'both', minWidth: '600px', minHeight: '400px' }}>
                 <DialogHeader>
                     <DialogTitle>Edit Note</DialogTitle>
                 </DialogHeader>
@@ -214,7 +214,7 @@ export function EditNote({ categories, editingNote, setEditingNote, onSuccess, i
                                     try {
                                         setIsSubmitting(true);
                                         // Ensure categoryId is a valid number before sending to the server
-                                        const categoryId = Number(editingNote?.category);
+                                        const categoryId = Number(editingNote?.categoryId);
 
                                         if (isNaN(categoryId)) {
                                             toast.error("Invalid category selected");
