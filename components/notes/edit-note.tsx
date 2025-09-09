@@ -134,16 +134,15 @@ export function EditNote({ categories, editingNote, setEditingNote, onSuccess, i
                             onChange={(e) => setEditingNote({ ...editingNote, title: e.target.value })}
                         />
                         <Select
-                            value={editingNote.category}
-                            onValueChange={(value: string) => setEditingNote({ ...editingNote, category: value })}
+                            value={editingNote.categoryId?.toString()}
+                            onValueChange={(value: string) => setEditingNote({ ...editingNote, categoryId: parseInt(value, 10) })}
                         >
                             <SelectTrigger>
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                                 {categories.map((category) => (
-                                    <SelectItem key={category.id} value={category.id}>
-                                        {/* @ts-ignore - category.label is a string */}
+                                    <SelectItem key={category.id} value={category.id.toString()}>
                                         {category.label}
                                     </SelectItem>
                                 ))}
@@ -162,12 +161,12 @@ export function EditNote({ categories, editingNote, setEditingNote, onSuccess, i
                                     Preview
                                 </TabsTrigger>
                             </TabsList>
-                            <TabsContent value="edit" className="mt-0">
+                            <TabsContent value="edit" className="mt-0 overflow-y-auto">
                                 <>
                                     {/* Add the markdown styles */}
                                     <style jsx global>{markdownStyles}</style>
                                     
-                                    <div data-color-mode="light" className="markdown-container">
+                                    <div data-color-mode="dark" className="markdown-container bg-background/80 rounded-2xl border border-gray-700 p-2">
                                         <MDEditor
                                             value={editingNote.content}
                                             /* @ts-ignore - proper type handling for MDEditor */
@@ -185,12 +184,12 @@ export function EditNote({ categories, editingNote, setEditingNote, onSuccess, i
                                     </div>
                                 </>
                             </TabsContent>
-                            <TabsContent value="preview" className="mt-0">
+                            <TabsContent value="preview" className="mt-0 overflow-y-auto">
                                 <>
                                     {/* Add the markdown styles */}
                                     <style jsx global>{markdownStyles}</style>
                                     
-                                    <div className="border rounded-md p-4 min-h-[300px] overflow-y-auto bg-white" data-color-mode="light">
+                                    <div className="min-h-[300px] overflow-y-auto bg-background/80 rounded-2xl border border-gray-700 p-2" data-color-mode="dark">
                                         {editingNote.content ? (
                                             <div className="markdown-body">
                                                 {/* @ts-ignore - proper type handling for MarkdownPreview */}

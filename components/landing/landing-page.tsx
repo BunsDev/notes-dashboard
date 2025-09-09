@@ -24,14 +24,15 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 export function LandingPage() {
     const [isMenuOpen, setIsMenuOpen] = useState(false)
 
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-background">
             {/* Navigation */}
-            <nav className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
+            <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16">
                         <div className="flex items-center">
@@ -50,6 +51,7 @@ export function LandingPage() {
                             <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors">
                                 Pricing
                             </a>
+                            <ThemeToggle />
                             <Button variant="outline">Log In</Button>
                             <Button>Get Started</Button>
                         </div>

@@ -27,14 +27,19 @@ html {
 }
         `}</style>
       </head>
-      {/* <ThemeProvider
-        attribute="class"
-        defaultTheme="dark"
-        enableSystem={false}
-        forcedTheme="dark"
-      > */}
-      <body><StackProvider app={stackServerApp}><StackTheme>{children}</StackTheme></StackProvider></body>
-      {/* </ThemeProvider> */}
+      <body>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+          forcedTheme="dark"
+        >
+          <StackProvider app={stackServerApp}>
+            <StackTheme>{children}</StackTheme>
+          </StackProvider>
+        </ThemeProvider>
+      </body>
     </html>
   )
 }

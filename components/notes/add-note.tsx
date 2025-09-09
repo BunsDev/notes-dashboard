@@ -213,7 +213,7 @@ export function AddNote({ categories, onSuccess, isOpen: externalIsOpen, onOpenC
             disabled={isSubmitting}
           />
           <Select
-            value={note.categoryId}
+            value={note.categoryId.toString()}
             onValueChange={(value: string) => setNote({ ...note, categoryId: Number(value) })}
             disabled={isSubmitting}
           >
@@ -222,7 +222,7 @@ export function AddNote({ categories, onSuccess, isOpen: externalIsOpen, onOpenC
             </SelectTrigger>
             <SelectContent>
               {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
+                <SelectItem key={category.id} value={category.id.toString()}>
                   {category.label}
                 </SelectItem>
               ))}
@@ -240,11 +240,11 @@ export function AddNote({ categories, onSuccess, isOpen: externalIsOpen, onOpenC
               </TabsTrigger>
             </TabsList>
             <TabsContent value="edit" className="mt-0">
-              <>
+              
                 {/* Add the markdown styles */}
                 <style jsx global>{markdownStyles}</style>
                 
-                <div data-color-mode="light" className="markdown-container">
+                <div data-color-mode="dark" className="markdown-container bg-background/80 rounded-2xl border border-gray-700 p-2 overflow-y-auto">
                   <MDEditor
                     value={note.content}
                     onChange={(val) => setNote({ ...note, content: val || "" })}
@@ -258,14 +258,13 @@ export function AddNote({ categories, onSuccess, isOpen: externalIsOpen, onOpenC
                     }}
                   />
                 </div>
-              </>
+              
             </TabsContent>
-            <TabsContent value="preview" className="mt-0">
-              <>
+            <TabsContent value="preview" className="mt-0 overflow-y-auto">
                 {/* Add the markdown styles */}
                 <style jsx global>{markdownStyles}</style>
                 
-                <div className="border rounded-md p-4 min-h-[300px] overflow-y-auto bg-white" data-color-mode="light">
+                <div className="min-h-[300px] overflow-y-auto bg-background/80 rounded-2xl border border-gray-700 p-2" data-color-mode="dark">
                   {note.content ? (
                     <div className="markdown-body">
                       <MarkdownPreview source={note.content} />
@@ -274,7 +273,6 @@ export function AddNote({ categories, onSuccess, isOpen: externalIsOpen, onOpenC
                     <p className="text-muted-foreground italic">Preview will appear here...</p>
                   )}
                 </div>
-              </>
             </TabsContent>
           </Tabs>
           <div className="flex justify-end gap-2">

@@ -107,7 +107,7 @@ export function NoteViewer({ note, isOpen, onOpenChange, getCategoryInfo }: Note
   
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="flex flex-col max-w-3xl max-h-[80vh] overflow-auto">
+      <DialogContent className="flex flex-col w-full max-w-screen-2xl max-h-[96vh] overflow-auto">
         <DialogHeader>
           <div className="flex items-center justify-between mb-2">
             <DialogTitle className="text-xl">{note.title}</DialogTitle>
@@ -117,15 +117,15 @@ export function NoteViewer({ note, isOpen, onOpenChange, getCategoryInfo }: Note
           </div>
         </DialogHeader>
         
-        <Separator className="my-2" />
+        <Separator className="my-1" />
         
-        <ScrollArea className="flex-1 overflow-y-auto">
-          <div className="p-4">
+        <ScrollArea className="flex-1 overflow-y-auto bg-background">
+          <div className="p-2 bg-background">
             {/* Add the markdown styles */}
             <style jsx global>{markdownStyles}</style>
             
-            <div className="markdown-container" data-color-mode="light">
-              <div className="markdown-body">
+            <div className="markdown-container bg-background/80 rounded-2xl border border-gray-700 p-2" data-color-mode="dark">
+              <div className="markdown-body bg-background/80 rounded-2xl p-1">
                 <MarkdownPreview source={note.content} />
               </div>
             </div>
@@ -134,8 +134,8 @@ export function NoteViewer({ note, isOpen, onOpenChange, getCategoryInfo }: Note
               <div className="mt-6 pt-4 border-t border-gray-200">
                 <h3 className="text-sm font-medium mb-2">Related Links</h3>
                 <ul className="space-y-1">
-                  {note.urls.map((url: string, index: number) => (
-                    <li key={index} className="text-sm">
+                  {note.urls.map((url: string) => (
+                    <li key={url} className="text-sm">
                       <a 
                         href={url} 
                         target="_blank" 

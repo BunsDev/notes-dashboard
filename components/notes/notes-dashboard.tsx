@@ -1,3 +1,5 @@
+/** biome-ignore-all lint/nursery/useUniqueElementIds: <explanation> */
+/** biome-ignore-all lint/correctness/useExhaustiveDependencies: <explanation> */
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
@@ -17,6 +19,8 @@ import { NoteViewer } from "./note-viewer"
 import { getNotes, toggleNotePin as toggleNotePinAction, deleteNote as deleteNoteAction } from "@/lib/db/actions"
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@radix-ui/react-dialog"
 import { DialogHeader } from "@/components/ui/dialog"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
 
 const categories = [
   { id: 0, label: "All Categories", icon: Code, color: "bg-blue-100 text-blue-800" },
@@ -36,6 +40,7 @@ export function NotesDashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false)
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; noteId: string; noteTitle: string }>({ isOpen: false, noteId: "", noteTitle: "" })
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -144,6 +149,10 @@ export function NotesDashboard() {
     setEditingNote(null)
   }
 
+  const handleDeleteClick = (noteId: string, noteTitle: string) => {
+    setDeleteConfirmation({ isOpen: true, noteId, noteTitle })
+  }
+
   const deleteNote = async (noteId: string) => {
     try {
       // Optimistically update UI
@@ -181,12 +190,15 @@ export function NotesDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 overflow-auto">
+    <div className="min-h-screen bg-background overflow-auto">
       <div className="container mx-auto p-6">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Interview Notes Dashboard</h1>
-          <p className="text-gray-600">Quick access to your interview preparation notes</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Interview Notes Dashboard</h1>
+            <p className="text-muted-foreground">Quick access to your interview preparation notes</p>
+          </div>
+          <ThemeToggle />
         </div>
 
         {/* Search and Controls */}
@@ -226,8 +238,8 @@ export function NotesDashboard() {
         </div>
 
         {/* Keyboard Shortcuts Help */}
-        <div className="mb-6 p-3 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-sm text-blue-800">
+        <div className="mb-6 p-3 bg-muted rounded-lg border border-border">
+          <p className="text-sm text-muted-foreground">
             <strong>Keyboard Shortcuts:</strong> ⌘K (Search) • ⌘N (New Note) • ⌘C (Categories) • ESC (Close Dialog)
           </p>
         </div>
@@ -237,7 +249,7 @@ export function NotesDashboard() {
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4">
               <Pin className="h-5 w-5 text-orange-500" />
-              <h2 className="text-xl font-semibold text-gray-900">Pinned Notes</h2>
+              <h2 className="text-xl font-semibold text-foreground">Pinned Notes</h2>
               <Badge variant="secondary">{pinnedNotes.length}</Badge>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -247,7 +259,7 @@ export function NotesDashboard() {
                   note={note}
                   onTogglePin={togglePin}
                   onEdit={setEditingNote}
-                  onDelete={deleteNote}
+                  onDelete={handleDeleteClick}
                   onView={setViewingNote}
                   getUrls={getUrls}
                   getCategoryInfo={getCategoryInfo}
@@ -263,7 +275,7 @@ export function NotesDashboard() {
         {unpinnedNotes.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">All Notes</h2>
+              <h2 className="text-xl font-semibold text-foreground">All Notes</h2>
               <Badge variant="secondary">{unpinnedNotes.length}</Badge>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -273,7 +285,7 @@ export function NotesDashboard() {
                   note={note}
                   onTogglePin={togglePin}
                   onEdit={setEditingNote}
-                  onDelete={deleteNote}
+                  onDelete={handleDeleteClick}
                   onView={setViewingNote}
                   getCategoryInfo={getCategoryInfo}
                   getUrls={getUrls}
@@ -286,8 +298,8 @@ export function NotesDashboard() {
         {filteredNotes.length === 0 && (
           <div className="text-center py-12">
             <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No notes found</h3>
-            <p className="text-gray-600 mb-4">
+            <h3 className="text-lg font-medium text-foreground mb-2">No notes found</h3>
+            <p className="text-muted-foreground mb-4">
               {searchQuery || selectedCategory !== 1
                 ? "Try adjusting your search or filter"
                 : "Create your first note to get started."}
@@ -331,6 +343,18 @@ export function NotesDashboard() {
         isOpen={isCategoryDialogOpen}
         onOpenChange={setIsCategoryDialogOpen}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={deleteConfirmation.isOpen}
+        onOpenChange={(open) => setDeleteConfirmation(prev => ({ ...prev, isOpen: open }))}
+        onConfirm={() => deleteNote(deleteConfirmation.noteId)}
+        title="Delete Note"
+        description={`Are you sure you want to delete "${deleteConfirmation.noteTitle}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="destructive"
+      />
     </div>
   )
 }
@@ -338,7 +362,7 @@ interface NoteCardProps {
   note: Note
   onTogglePin: (id: string) => void
   onEdit: (note: Note) => void
-  onDelete: (id: string) => void
+  onDelete: (id: string, title: string) => void
   onView: (note: Note) => void
   getCategoryInfo: (categoryId: number) => any
   getUrls: (noteId: string) => string[]
@@ -348,8 +372,19 @@ function NoteCard({ note, onTogglePin, onEdit, onDelete, onView, getCategoryInfo
   const categoryInfo = getCategoryInfo(note.categoryId)
   const CategoryIcon = categoryInfo.icon
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't open note if clicking on action buttons
+    if ((e.target as HTMLElement).closest('button')) {
+      return
+    }
+    onView(note)
+  }
+
   return (
-    <Card className="group hover:shadow-md transition-shadow">
+    <Card 
+      className="group hover:shadow-md transition-shadow cursor-pointer" 
+      onClick={handleCardClick}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -357,19 +392,19 @@ function NoteCard({ note, onTogglePin, onEdit, onDelete, onView, getCategoryInfo
             <CardTitle className="text-base truncate">{note.title}</CardTitle>
           </div>
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button variant="ghost" size="sm" onClick={() => onTogglePin(note.id.toString())} className="h-8 w-8 p-0">
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onTogglePin(note.id.toString()) }} className="h-8 w-8 p-0">
               {note.isPinned ? <PinOff className="h-4 w-4 text-orange-500" /> : <Pin className="h-4 w-4" />}
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => onView(note)} className="h-8 w-8 p-0">
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onView(note) }} className="h-8 w-8 p-0">
               <Eye className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => onEdit(note)} className="h-8 w-8 p-0">
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onEdit(note) }} className="h-8 w-8 p-0">
               <Edit className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onDelete(note.id.toString())}
+              onClick={(e) => { e.stopPropagation(); onDelete(note.id.toString(), note.title) }}
               className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
             >
               <Trash2 className="h-4 w-4" />
@@ -380,10 +415,10 @@ function NoteCard({ note, onTogglePin, onEdit, onDelete, onView, getCategoryInfo
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-32">
-          <p className="text-sm text-gray-600 whitespace-pre-wrap cursor-pointer hover:text-gray-800" onClick={() => onView(note)}>{note.content}</p>
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{note.content}</p>
         </ScrollArea>
         <div className="mt-3 pt-3 border-t">
-          <p className="text-xs text-gray-400">Updated {note.updated.toLocaleDateString()}</p>
+          <p className="text-xs text-muted-foreground">Updated {note.updated.toLocaleDateString()}</p>
         </div>
       </CardContent>
     </Card>
