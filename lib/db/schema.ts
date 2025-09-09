@@ -1,4 +1,4 @@
-import { pgTable, serial, text, varchar, boolean, timestamp, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, varchar, boolean, timestamp, pgEnum, integer } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 
@@ -30,6 +30,7 @@ export const notes = pgTable('notes', {
   categoryId: serial('category_id').references(() => categories.id).notNull(),
   urls: text('urls').array(),
   isPinned: boolean('is_pinned').default(false).notNull(),
+  sortOrder: integer('sort_order').default(0).notNull(),
   created: timestamp('created').defaultNow().notNull(),
   updated: timestamp('updated').defaultNow().notNull(),
 });

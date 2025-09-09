@@ -1,9 +1,10 @@
 /** biome-ignore-all lint/nursery/useUniqueElementIds: <explanation> */
+/** biome-ignore-all lint/a11y/noStaticElementInteractions: <explanation> */
 /** biome-ignore-all lint/correctness/useExhaustiveDependencies: <explanation> */
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { Search, Pin, PinOff, Edit, Trash2, BookOpen, Code, Users, Lightbulb, Plus, FileText, Eye, Grid3X3, List, LogIn } from "lucide-react"
+import { Search, Pin, PinOff, Edit, Trash2, BookOpen, Code, Users, Lightbulb, Plus, FileText, Eye, Grid3X3, List, LogIn, GripVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,7 +17,7 @@ import { Category, Note } from "@/lib/db/schema"
 import { AddNote } from "./add-note"
 import { EditNote } from "./edit-note"
 import { NoteViewer } from "./note-viewer"
-import { getNotes, toggleNotePin as toggleNotePinAction, deleteNote as deleteNoteAction } from "@/lib/db/actions"
+import { getNotes, toggleNotePin as toggleNotePinAction, deleteNote as deleteNoteAction, updateNoteOrder } from "@/lib/db/actions"
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@radix-ui/react-dialog"
 import { DialogHeader } from "@/components/ui/dialog"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
@@ -43,6 +44,8 @@ export function NotesDashboard() {
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false)
   const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; noteId: string; noteTitle: string }>({ isOpen: false, noteId: "", noteTitle: "" })
   const [layoutMode, setLayoutMode] = useState<"grid" | "list">("grid")
+  const [draggedNote, setDraggedNote] = useState<Note | null>(null)
+  const [dragOverNote, setDragOverNote] = useState<string | null>(null)
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -178,6 +181,65 @@ export function NotesDashboard() {
     }
   }
 
+  const handleDragStart = (e: React.DragEvent, note: Note) => {
+    setDraggedNote(note)
+    e.dataTransfer.effectAllowed = "move"
+    e.dataTransfer.setData("text/html", note.id.toString())
+  }
+
+  const handleDragOver = (e: React.DragEvent, noteId: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
+    setDragOverNote(noteId)
+  }
+
+  const handleDragLeave = () => {
+    setDragOverNote(null)
+  }
+
+  const handleDrop = async (e: React.DragEvent, targetNote: Note) => {
+    e.preventDefault()
+    setDragOverNote(null)
+    
+    if (!draggedNote || draggedNote.id === targetNote.id) {
+      setDraggedNote(null)
+      return
+    }
+
+    try {
+      // Get the current notes in the same pinned group
+      const isPinnedGroup = draggedNote.isPinned
+      const relevantNotes = notes.filter(note => note.isPinned === isPinnedGroup)
+      
+      // Find positions
+      const draggedIndex = relevantNotes.findIndex(note => note.id === draggedNote.id)
+      const targetIndex = relevantNotes.findIndex(note => note.id === targetNote.id)
+      
+      if (draggedIndex === -1 || targetIndex === -1) return
+
+      // Reorder the notes array
+      const newNotes = [...relevantNotes]
+      const [removed] = newNotes.splice(draggedIndex, 1)
+      newNotes.splice(targetIndex, 0, removed)
+
+      // Update sort orders
+      for (let i = 0; i < newNotes.length; i++) {
+        const note = newNotes[i]
+        const newOrder = i
+        await updateNoteOrder(note.id.toString(), newOrder)
+      }
+
+      // Refresh the notes list
+      loadNotes()
+      toast.success("Note order updated")
+    } catch (error) {
+      console.error("Error reordering notes:", error)
+      toast.error("Failed to reorder notes")
+    }
+    
+    setDraggedNote(null)
+  }
+
   const getCategoryInfo = (categoryId: number) => {
     return categories.find((cat) => cat.id === Number(categoryId)) || categories[0]
   }
@@ -280,6 +342,11 @@ export function NotesDashboard() {
                   getUrls={getUrls}
                   getCategoryInfo={getCategoryInfo}
                   layoutMode={layoutMode}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  isDraggedOver={dragOverNote === note.id.toString()}
                 />
               ))}
             </div>
@@ -307,6 +374,11 @@ export function NotesDashboard() {
                   getCategoryInfo={getCategoryInfo}
                   getUrls={getUrls}
                   layoutMode={layoutMode}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  isDraggedOver={dragOverNote === note.id.toString()}
                 />
               ))}
             </div>
@@ -385,44 +457,63 @@ interface NoteCardProps {
   getCategoryInfo: (categoryId: number) => any
   getUrls: (noteId: string) => string[]
   layoutMode: "grid" | "list"
+  onDragStart: (e: React.DragEvent, note: Note) => void
+  onDragOver: (e: React.DragEvent, noteId: string) => void
+  onDragLeave: () => void
+  onDrop: (e: React.DragEvent, note: Note) => void
+  isDraggedOver: boolean
 }
 
-function NoteCard({ note, onTogglePin, onEdit, onDelete, onView, getCategoryInfo, getUrls, layoutMode }: NoteCardProps) {
+function NoteCard({ note, onTogglePin, onEdit, onDelete, onView, getCategoryInfo, getUrls, layoutMode, onDragStart, onDragOver, onDragLeave, onDrop, isDraggedOver }: NoteCardProps) {
   const categoryInfo = getCategoryInfo(note.categoryId)
   const CategoryIcon = categoryInfo.icon
 
   if (layoutMode === "list") {
     return (
-      <Card className="group hover:shadow-md transition-shadow cursor-pointer" onClick={() => onView(note)}>
-        <div className="flex items-center p-4 gap-4">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <CategoryIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
+      <Card 
+        className={`group hover:shadow-md transition-shadow cursor-pointer relative ${isDraggedOver ? 'ring-2 ring-blue-500 bg-blue-50' : ''}`}
+        onClick={() => onView(note)}
+        draggable
+        onDragStart={(e) => onDragStart(e, note)}
+        onDragOver={(e) => onDragOver(e, note.id.toString())}
+        onDragLeave={onDragLeave}
+        onDrop={(e) => onDrop(e, note)}
+      >
+        <div className="flex items-start p-4 gap-4 min-h-[100px]">
+          <div 
+            className="cursor-grab active:cursor-grabbing mt-1" 
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="h-4 w-4 text-gray-400" />
+          </div>
+          <div className="flex items-start gap-2 flex-1 min-w-0 pr-24">
+            <CategoryIcon className="h-4 w-4 text-gray-500 flex-shrink-0 mt-1" />
             <div className="flex-1 min-w-0">
               <h3 className="font-medium truncate">{note.title}</h3>
-              <p className="text-sm text-gray-600 truncate mt-1">{note.content}</p>
+              <p className="text-sm text-gray-600 line-clamp-2 mt-1">{note.content}</p>
               <div className="flex items-center gap-2 mt-2">
                 <Badge className={`text-xs ${categoryInfo.color}`}>{categoryInfo.label}</Badge>
                 <span className="text-xs text-gray-400">Updated {note.updated.toLocaleDateString()}</span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onTogglePin(note.id.toString()) }} className="h-8 w-8 p-0">
-              {note.isPinned ? <PinOff className="h-4 w-4 text-orange-500" /> : <Pin className="h-4 w-4" />}
+          <div className="absolute bottom-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-sm rounded-md p-1 shadow-sm">
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onTogglePin(note.id.toString()) }} className="h-6 w-6 p-0">
+              {note.isPinned ? <PinOff className="h-3 w-3 text-orange-500" /> : <Pin className="h-3 w-3" />}
             </Button>
-            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onView(note) }} className="h-8 w-8 p-0">
-              <Eye className="h-4 w-4" />
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onView(note) }} className="h-6 w-6 p-0">
+              <Eye className="h-3 w-3" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onEdit(note) }} className="h-8 w-8 p-0">
-              <Edit className="h-4 w-4" />
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onEdit(note) }} className="h-6 w-6 p-0">
+              <Edit className="h-3 w-3" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={(e) => { e.stopPropagation(); onDelete(note.id.toString(), note.title) }}
-              className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+              className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-3 w-3" />
             </Button>
           </div>
         </div>
@@ -431,36 +522,28 @@ function NoteCard({ note, onTogglePin, onEdit, onDelete, onView, getCategoryInfo
   }
 
   return (
-    <Card className="group hover:shadow-md transition-shadow cursor-pointer" onClick={() => onView(note)}>
+    <Card 
+      className={`group hover:shadow-md transition-shadow cursor-pointer relative ${isDraggedOver ? 'ring-2 ring-blue-500 bg-blue-50' : ''}`}
+      onClick={() => onView(note)}
+      draggable
+      onDragStart={(e) => onDragStart(e, note)}
+      onDragOver={(e) => onDragOver(e, note.id.toString())}
+      onDragLeave={onDragLeave}
+      onDrop={(e) => onDrop(e, note)}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="cursor-grab active:cursor-grabbing mr-2" onMouseDown={(e) => e.stopPropagation()}>
+            <GripVertical className="h-4 w-4 text-gray-400" />
+          </div>
+          <div className="flex items-center gap-2 flex-1 min-w-0 pr-2">
             <CategoryIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
             <CardTitle className="text-base truncate">{note.title}</CardTitle>
-          </div>
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onTogglePin(note.id.toString()) }} className="h-8 w-8 p-0">
-              {note.isPinned ? <PinOff className="h-4 w-4 text-orange-500" /> : <Pin className="h-4 w-4" />}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onView(note) }} className="h-8 w-8 p-0">
-              <Eye className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onEdit(note) }} className="h-8 w-8 p-0">
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => { e.stopPropagation(); onDelete(note.id.toString(), note.title) }}
-              className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
           </div>
         </div>
         <Badge className={`w-fit text-xs ${categoryInfo.color}`}>{categoryInfo.label}</Badge>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pb-12">
         <ScrollArea className="h-32">
           <p className="text-sm text-muted-foreground whitespace-pre-wrap">{note.content}</p>
         </ScrollArea>
@@ -468,6 +551,25 @@ function NoteCard({ note, onTogglePin, onEdit, onDelete, onView, getCategoryInfo
           <p className="text-xs text-muted-foreground">Updated {note.updated.toLocaleDateString()}</p>
         </div>
       </CardContent>
+      <div className="absolute bottom-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/90 backdrop-blur-sm rounded-md p-1 shadow-sm">
+        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onTogglePin(note.id.toString()) }} className="h-6 w-6 p-0">
+          {note.isPinned ? <PinOff className="h-3 w-3 text-orange-500" /> : <Pin className="h-3 w-3" />}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onView(note) }} className="h-6 w-6 p-0">
+          <Eye className="h-3 w-3" />
+        </Button>
+        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onEdit(note) }} className="h-6 w-6 p-0">
+          <Edit className="h-3 w-3" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => { e.stopPropagation(); onDelete(note.id.toString(), note.title) }}
+          className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      </div>
     </Card>
   )
 }

@@ -31,6 +31,7 @@ export async function getNotes() {
       },
       orderBy: [
         desc(notes.isPinned),
+        notes.sortOrder,
         desc(notes.updated)
       ],
     });
@@ -266,6 +267,66 @@ export async function deleteNote(id: string) {
     return { success: true };
   } catch (error) {
     console.error(`Error deleting note with ID ${id}:`, error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred"
+    };
+  }
+}
+
+/**
+ * Update note sort order (only if the current user is the author)
+ */
+export async function updateNoteOrder(noteId: string, newOrder: number) {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return {
+        success: false,
+        error: "Authentication required"
+      };
+    }
+
+    const numericId = parseInt(noteId, 10);
+
+    if (Number.isNaN(numericId)) {
+      return {
+        success: false,
+        error: "Invalid note ID format"
+      };
+    }
+
+    // First check if the note exists and belongs to this user
+    const existingNote = await db.query.notes.findFirst({
+      where: and(
+        eq(notes.id, numericId),
+        eq(notes.userId, user.id)
+      ),
+    });
+
+    if (!existingNote) {
+      return {
+        success: false,
+        error: "Note not found or you don't have permission to modify it"
+      };
+    }
+
+    // Update the sort order
+    await db.update(notes)
+      .set({
+        sortOrder: newOrder,
+        updated: new Date()
+      })
+      .where(and(
+        eq(notes.id, numericId),
+        eq(notes.userId, user.id)
+      ));
+
+    revalidatePath('/');
+    return { success: true };
+  } catch (error) {
+    console.error(`Error updating sort order for note with ID ${noteId}:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error occurred"
